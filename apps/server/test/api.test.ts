@@ -3,13 +3,15 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { HocuspocusProvider, HocuspocusProviderWebsocket } from '@hocuspocus/provider';
 import WebSocket from 'ws';
 import * as Y from 'yjs';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { parseMdl, writeMdl } from '@cld/mdl';
 import { addVariableNode, roots, toSnapshot } from '@cld/model';
 import { docName } from '@cld/shared';
 import { buildApp } from '../src/app.js';
 import { createDb, runMigrations } from '../src/db/index.js';
 import { loadEnv } from '../src/env.js';
+import { cleanupGuests } from '../src/guests.js';
+import { user as userTable } from '../src/db/schema.js';
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? 'postgres://loopwise:loopwise@localhost:5433/loopwise_test';
@@ -215,7 +217,7 @@ describe('real-time collaboration', () => {
       projectName: 'Coffee CLD',
       role: 'viewer',
       invitedBy: 'Alice',
-      alreadyMember: false,
+      viewer: { alreadyMember: false, isGuest: false },
     });
     expect((await carol.req('POST', `/api/invites/${link.json.token}/accept`)).json).toEqual({
       projectId,
@@ -385,5 +387,184 @@ describe('versions, duplicate, delete', () => {
     expect(members.json.invites).toMatchObject([{ email: 'dave@example.com', role: 'commenter' }]);
     const dave = await new User('Dave', 'dave@example.com').signUp();
     expect((await dave.req('GET', `/api/projects/${p.json.id}`)).json.role).toBe('commenter');
+  });
+});
+
+describe('guest access via share links', () => {
+  const owner = new User('Gina', 'gina@example.com');
+  let pid = '';
+  let link: { id: string; token: string; allowGuests: boolean };
+  const guest = new User('Jonas', '');
+
+  it('lets a visitor join with just a name and collaborate', async () => {
+    await owner.signUp();
+    pid = (await owner.req('POST', '/api/projects', { name: 'Workshop' })).json.id;
+    link = (await owner.req('POST', `/api/projects/${pid}/links`, { role: 'editor' })).json;
+    expect(link.allowGuests).toBe(true);
+
+    const preview = await guest.req('GET', `/api/invites/${link.token}`);
+    expect(preview.json).toMatchObject({
+      projectName: 'Workshop',
+      role: 'editor',
+      invitedBy: 'Gina',
+      allowGuests: true,
+      viewer: null,
+    });
+
+    expect(
+      (await guest.req('POST', `/api/invites/${link.token}/guest`, { name: '  ' })).status,
+    ).toBe(400);
+    const joined = await guest.req('POST', `/api/invites/${link.token}/guest`, { name: 'Jonas' });
+    expect(joined.json).toEqual({ projectId: pid });
+    expect((await guest.req('GET', '/api/me')).json).toMatchObject({
+      name: 'Jonas',
+      email: '',
+      isGuest: true,
+    });
+
+    const g = guest.connect(pid);
+    const o = owner.connect(pid);
+    await until(() => g.state.synced && o.state.synced);
+    expect(g.state.scope).toBe('read-write');
+    const diagramId = [...roots(g.doc).diagrams.keys()][0]!;
+    const layerId = [
+      ...(roots(g.doc).diagrams.get(diagramId)!.get('layers') as Y.Map<unknown>).keys(),
+    ][0]!;
+    addVariableNode(g.doc, diagramId, { name: 'Guest idea', x: 0, y: 0, layerId });
+    await until(() =>
+      Object.values(toSnapshot(o.doc).variables).some((v) => v.name === 'Guest idea'),
+    );
+    g.destroy();
+    o.destroy();
+  });
+
+  it('keeps guests out of account-only actions and hides emails', async () => {
+    expect((await guest.req('POST', '/api/projects', { name: 'Mine' })).status).toBe(403);
+    expect((await guest.req('POST', `/api/projects/${pid}/duplicate`)).status).toBe(403);
+    expect((await guest.req('PATCH', `/api/projects/${pid}`, { name: 'x' })).status).toBe(403);
+    expect((await guest.req('POST', `/api/projects/${pid}/links`, { role: 'editor' })).status).toBe(
+      403,
+    );
+    expect(
+      (await guest.req('POST', `/api/projects/${pid}/members`, { email: 'a@b.de', role: 'editor' }))
+        .status,
+    ).toBe(403);
+    const asGuest = await guest.req('GET', `/api/projects/${pid}/members`);
+    expect(asGuest.json.members.every((m: { email: string | null }) => m.email === null)).toBe(
+      true,
+    );
+    const asOwner = await owner.req('GET', `/api/projects/${pid}/members`);
+    expect(asOwner.json.members).toMatchObject([
+      { name: 'Gina', email: 'gina@example.com', isGuest: false },
+      { name: 'Jonas', email: null, isGuest: true },
+    ]);
+    // Guests may rename themselves and leave.
+    expect((await guest.req('PATCH', '/api/me', { name: 'Jonas W.' })).json.name).toBe('Jonas W.');
+  });
+
+  it('reuses the guest identity for a second link and respects guest switches', async () => {
+    const me = (await guest.req('GET', '/api/me')).json.id;
+    const p2 = (await owner.req('POST', '/api/projects', { name: 'Second' })).json.id;
+    const closed = (
+      await owner.req('POST', `/api/projects/${p2}/links`, { role: 'viewer', allowGuests: false })
+    ).json;
+    const preview = await guest.req('GET', `/api/invites/${closed.token}`);
+    expect(preview.json).toMatchObject({
+      allowGuests: false,
+      viewer: { isGuest: true, alreadyMember: false },
+    });
+    expect(
+      (await guest.req('POST', `/api/invites/${closed.token}/guest`, { name: 'Jonas' })).status,
+    ).toBe(403);
+    expect(
+      (await new User('x', '').req('POST', `/api/invites/${closed.token}/guest`, { name: 'Anon' }))
+        .status,
+    ).toBe(403);
+    await owner.req('PATCH', `/api/projects/${p2}/links/${closed.id}`, { allowGuests: true });
+    expect(
+      (await guest.req('POST', `/api/invites/${closed.token}/guest`, { name: 'Jonas' })).json,
+    ).toEqual({ projectId: p2 });
+    expect((await guest.req('GET', '/api/me')).json.id).toBe(me);
+    expect(
+      (await guest.req('GET', '/api/projects')).json.map((p: { name: string }) => p.name).sort(),
+    ).toEqual(['Second', 'Workshop']);
+  });
+
+  it('removes the guests of a revoked link', async () => {
+    const extra = new User('Temp', '');
+    await extra.req('POST', `/api/invites/${link.token}/guest`, { name: 'Temp' });
+    const links = (await owner.req('GET', `/api/projects/${pid}/links`)).json;
+    expect(links[0]).toMatchObject({ guestCount: 2 });
+    const c = extra.connect(pid);
+    await until(() => c.state.synced);
+    const closedBefore = c.state.closed;
+    // Keep Jonas: owner promotes him to a regular member of this project by removing the link association later.
+    const res = await owner.req(
+      'DELETE',
+      `/api/projects/${pid}/links/${link.id}?removeGuests=true`,
+    );
+    expect(res.json).toEqual({ ok: true, removedGuests: 2 });
+    await until(() => c.state.closed > closedBefore);
+    expect((await extra.req('GET', `/api/projects/${pid}`)).status).toBe(404);
+    expect((await extra.req('GET', `/api/invites/${link.token}`)).status).toBe(404);
+    c.destroy();
+  });
+
+  it('moves everything to the account when a guest signs up', async () => {
+    const newLink = (await owner.req('POST', `/api/projects/${pid}/links`, { role: 'commenter' }))
+      .json;
+    const visitor = new User('Vivi', 'vivi@example.com');
+    await visitor.req('POST', `/api/invites/${newLink.token}/guest`, { name: 'Vivi' });
+    const guestId = (await visitor.req('GET', '/api/me')).json.id;
+    const o = owner.connect(pid);
+    await until(() => o.state.synced);
+    const diagramId = [...roots(o.doc).diagrams.keys()][0]!;
+    await visitor.req('POST', `/api/projects/${pid}/comments`, {
+      diagramId,
+      x: 1,
+      y: 1,
+      body: 'Guest comment',
+    });
+    await until(() => Object.keys(toSnapshot(o.doc).comments).length === 1);
+
+    await visitor.signUp();
+    const me = (await visitor.req('GET', '/api/me')).json;
+    expect(me).toMatchObject({ isGuest: false, email: 'vivi@example.com' });
+    expect(me.id).not.toBe(guestId);
+    expect((await visitor.req('GET', `/api/projects/${pid}`)).json.role).toBe('commenter');
+    await until(
+      () => Object.values(toSnapshot(o.doc).comments)[0]!.messages[0]!.authorId === me.id,
+    );
+    expect(Object.values(toSnapshot(o.doc).comments)[0]!.createdBy).toBe(me.id);
+    expect(await db.select().from(userTable).where(eq(userTable.id, guestId))).toHaveLength(0);
+    o.destroy();
+  });
+
+  it('merges into an existing account on sign-in, keeping the higher role', async () => {
+    const editorLink = (await owner.req('POST', `/api/projects/${pid}/links`, { role: 'editor' }))
+      .json;
+    const carolGuest = new User('Carol', 'carol@example.com'); // Carol already has an account (commenter elsewhere)
+    await carolGuest.req('POST', `/api/invites/${editorLink.token}/guest`, { name: 'Carol' });
+    const res = await carolGuest.req('POST', '/api/auth/sign-in/email', {
+      email: 'carol@example.com',
+      password: 'correct-horse-battery',
+    });
+    expect(res.status).toBe(200);
+    expect((await carolGuest.req('GET', '/api/me')).json.isGuest).toBe(false);
+    expect((await carolGuest.req('GET', `/api/projects/${pid}`)).json.role).toBe('editor');
+  });
+
+  it('cleans up guests without projects', async () => {
+    const lonely = new User('Lonely', '');
+    const l = (await owner.req('POST', `/api/projects/${pid}/links`, { role: 'viewer' })).json;
+    await lonely.req('POST', `/api/invites/${l.token}/guest`, { name: 'Lonely' });
+    const id = (await lonely.req('GET', '/api/me')).json.id;
+    await lonely.req('DELETE', `/api/projects/${pid}/members/${id}`);
+    await db
+      .update(userTable)
+      .set({ createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000) })
+      .where(eq(userTable.id, id));
+    expect(await cleanupGuests(db)).toBeGreaterThanOrEqual(1);
+    expect((await lonely.req('GET', '/api/me')).status).toBe(401);
   });
 });
