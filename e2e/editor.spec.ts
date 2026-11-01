@@ -156,3 +156,18 @@ test.describe('single-user editing', () => {
     await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible();
   });
 });
+
+test('loads without console errors or CSP violations', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    // The anonymous session probe on the sign-up page is an expected 401.
+    if (m.type() === 'error' && !m.text().includes('401')) errors.push(m.text());
+  });
+  page.on('pageerror', (e) => errors.push(e.message));
+  await signUp(page, 'Clean');
+  await createProject(page, 'Console check');
+  await addVariable(page, 'A', 400, 300);
+  await page.keyboard.press('ControlOrMeta+e');
+  await expect(page.getByRole('dialog', { name: 'Export' })).toBeVisible();
+  expect(errors).toEqual([]);
+});

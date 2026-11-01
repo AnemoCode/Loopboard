@@ -2,7 +2,7 @@ import { expect, type Browser, type Page } from '@playwright/test';
 
 export const PASSWORD = 'correct-horse-battery';
 let counter = 0;
-export const uniqueEmail = (name: string) => `${name.toLowerCase()}-${Date.now()}-${counter++}@example.com`;
+export const uniqueEmail = (name: string) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, "")}-${Date.now()}-${counter++}@example.com`;
 
 export async function signUp(page: Page, name: string): Promise<string> {
   const email = uniqueEmail(name);
