@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { anonymous } from 'better-auth/plugins';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Db } from './db/index.js';
@@ -14,7 +15,12 @@ import type { Env } from './env.js';
 
 export type Auth = ReturnType<typeof createAuth>;
 
-export function createAuth(env: Env, db: Db) {
+export interface AuthHooks {
+  /** Called when a guest signs up or signs in, before the guest user is deleted. */
+  onGuestLinked?: (guestId: string, userId: string) => Promise<void>;
+}
+
+export function createAuth(env: Env, db: Db, hooks: AuthHooks = {}) {
   const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {};
   if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)
     socialProviders.google = {
@@ -50,6 +56,16 @@ export function createAuth(env: Env, db: Db) {
       max: 30,
     },
     telemetry: { enabled: false },
+    plugins: [
+      anonymous({
+        // Placeholder addresses for guests; never shown or mailed.
+        emailDomainName: 'guest.loopwise.invalid',
+        generateName: () => 'Guest',
+        onLinkAccount: async ({ anonymousUser, newUser }) => {
+          await hooks.onGuestLinked?.(anonymousUser.user.id, newUser.user.id);
+        },
+      }),
+    ],
     databaseHooks: {
       user: {
         create: {

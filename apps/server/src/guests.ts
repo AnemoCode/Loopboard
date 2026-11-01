@@ -1,0 +1,89 @@
+import { and, eq, gt, inArray, lt, notExists, sql } from 'drizzle-orm';
+import { reassignCommentAuthor } from '@cld/model';
+import { atLeast, type Role } from '@cld/shared';
+import type { Collab } from './collab.js';
+import type { Db } from './db/index.js';
+import { projectMembers, projectVersions, session, user } from './db/schema.js';
+
+/**
+ * A guest created an account (or signed in to one): move their memberships, version authorship
+ * and comment authorship to the account. Runs before Better Auth deletes the guest user.
+ */
+export async function migrateGuest(
+  db: Db,
+  collab: Collab,
+  from: string,
+  to: string,
+): Promise<void> {
+  if (from === to) return;
+  const memberships = await db.select().from(projectMembers).where(eq(projectMembers.userId, from));
+  for (const m of memberships) {
+    const [existing] = await db
+      .select({ role: projectMembers.role })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.projectId, m.projectId), eq(projectMembers.userId, to)));
+    if (!existing) {
+      await db.insert(projectMembers).values({ projectId: m.projectId, userId: to, role: m.role });
+    } else if (!atLeast(existing.role as Role, m.role as Role)) {
+      // Keep the higher of the two roles.
+      await db
+        .update(projectMembers)
+        .set({ role: m.role })
+        .where(and(eq(projectMembers.projectId, m.projectId), eq(projectMembers.userId, to)));
+    }
+  }
+  await db
+    .update(projectVersions)
+    .set({ createdBy: to })
+    .where(eq(projectVersions.createdBy, from));
+  for (const m of memberships) {
+    await collab.withDocument(m.projectId, (doc) => void reassignCommentAuthor(doc, from, to));
+  }
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Delete guests who no longer belong to any project (after a day's grace) or haven't been active
+ * for 90 days. Their comments keep the author's name, which is stored in the document.
+ */
+export async function cleanupGuests(db: Db): Promise<number> {
+  const orphaned = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(
+      and(
+        eq(user.isAnonymous, true),
+        lt(user.createdAt, new Date(Date.now() - DAY)),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(projectMembers)
+            .where(eq(projectMembers.userId, user.id)),
+        ),
+      ),
+    );
+  const inactive = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(
+      and(
+        eq(user.isAnonymous, true),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(session)
+            .where(
+              and(
+                eq(session.userId, user.id),
+                gt(session.updatedAt, new Date(Date.now() - 90 * DAY)),
+              ),
+            ),
+        ),
+        lt(user.createdAt, new Date(Date.now() - 90 * DAY)),
+      ),
+    );
+  const ids = [...new Set([...orphaned, ...inactive].map((u) => u.id))];
+  if (ids.length) await db.delete(user).where(inArray(user.id, ids));
+  return ids.length;
+}

@@ -1,10 +1,12 @@
 import websocket from '@fastify/websocket';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { AppConfig, Me, Role } from '@cld/shared';
-import { atLeast } from '@cld/shared';
-import { createAuth, type Auth } from './auth.js';
+import { atLeast, updateMeBody } from '@cld/shared';
+import { createAuth, type Auth, type AuthHooks } from './auth.js';
+import { cleanupGuests, migrateGuest } from './guests.js';
+import { user } from './db/schema.js';
 import { createCollab, type Collab } from './collab.js';
 import type { Db } from './db/index.js';
 import type { Env } from './env.js';
@@ -28,6 +30,9 @@ export interface Ctx {
   /** Throws 401/403/404 unless the current user has at least `min` on the project. */
   requireRole: (req: FastifyRequest, projectId: string, min: Role) => Promise<Role>;
   requireUser: (req: FastifyRequest) => Me;
+  /** Like requireUser, but guests (no account) get a 403. */
+  requireAccount: (req: FastifyRequest) => Me;
+  headersOf: (req: FastifyRequest) => Headers;
 }
 
 const headersOf = (req: FastifyRequest) => {
@@ -46,8 +51,10 @@ export async function buildApp(env: Env, db: Db) {
     bodyLimit: 12 * 1024 * 1024,
     trustProxy: true,
   });
-  const auth = createAuth(env, db);
+  const authHooks: AuthHooks = {};
+  const auth = createAuth(env, db, authHooks);
   const collab = createCollab(db, auth, app.log);
+  authHooks.onGuestLinked = (guestId, userId) => migrateGuest(db, collab, guestId, userId);
   const publicOrigin = new URL(env.PUBLIC_URL).origin;
 
   if (!env.DISABLE_RATE_LIMIT)
@@ -86,14 +93,20 @@ export async function buildApp(env: Env, db: Db) {
       req.user = {
         id: session.user.id,
         name: session.user.name,
-        email: session.user.email,
+        email: session.user.isAnonymous ? '' : session.user.email,
         image: session.user.image ?? null,
+        isGuest: !!session.user.isAnonymous,
       };
   });
 
   const requireUser = (req: FastifyRequest): Me => {
     if (!req.user) throw new HttpError(401, 'Please sign in');
     return req.user;
+  };
+  const requireAccount = (req: FastifyRequest): Me => {
+    const me = requireUser(req);
+    if (me.isGuest) throw new HttpError(403, 'Create a free account to do this');
+    return me;
   };
   const requireRole = async (req: FastifyRequest, projectId: string, min: Role): Promise<Role> => {
     const user = requireUser(req);
@@ -140,8 +153,14 @@ export async function buildApp(env: Env, db: Db) {
     ],
   }));
   app.get('/api/me', async (req) => requireUser(req));
+  app.patch('/api/me', async (req) => {
+    const me = requireUser(req);
+    const { name } = updateMeBody.parse(req.body);
+    await db.update(user).set({ name, updatedAt: new Date() }).where(eq(user.id, me.id));
+    return { ...me, name };
+  });
 
-  const ctx: Ctx = { env, db, auth, collab, requireRole, requireUser };
+  const ctx: Ctx = { env, db, auth, collab, requireRole, requireUser, requireAccount, headersOf };
   await app.register(async (r) => projectRoutes(r, ctx));
   await app.register(async (r) => sharingRoutes(r, ctx));
   await app.register(async (r) => commentRoutes(r, ctx));
@@ -163,6 +182,16 @@ export async function buildApp(env: Env, db: Db) {
     );
     socket.on('pong', () => conn.touch());
   });
+
+  // Daily housekeeping: remove guests without projects or activity.
+  if (env.NODE_ENV !== 'test') {
+    const sweep = () =>
+      cleanupGuests(db).catch((err) => app.log.warn({ err }, 'guest cleanup failed'));
+    void sweep();
+    const timer = setInterval(sweep, 24 * 60 * 60 * 1000);
+    timer.unref();
+    app.addHook('onClose', async () => clearInterval(timer));
+  }
 
   app.addHook('onClose', async () => {
     collab.hocuspocus.closeConnections();
