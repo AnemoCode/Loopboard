@@ -1,0 +1,54 @@
+# Production stack for the server, deployed by .github/workflows/deploy.yml.
+# Runs behind a TLS-terminating reverse proxy (e.g. Nginx Proxy Manager) that forwards to WEB_PORT.
+# Configuration lives in .env next to this file (see .env.prod.example).
+name: loopwise
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: loopwise
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: loopwise
+    volumes: [db:/var/lib/postgresql]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U loopwise']
+      interval: 3s
+      retries: 20
+
+  server:
+    image: ghcr.io/anemocode/loopwise-server:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://loopwise:${POSTGRES_PASSWORD}@db:5432/loopwise
+      PUBLIC_URL: ${PUBLIC_URL:?Set PUBLIC_URL in .env, e.g. https://loopwise.example.com}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET (openssl rand -base64 32)}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+    depends_on:
+      db: { condition: service_healthy }
+
+  web:
+    image: ghcr.io/anemocode/loopwise-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      # Plain HTTP: the reverse proxy in front terminates TLS.
+      SITE_ADDRESS: ':80'
+      # Trust X-Forwarded-* from the proxy so the server sees real client IPs (rate limits) and https.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-private_ranges}
+    ports:
+      - '${WEB_BIND:-0.0.0.0}:${WEB_PORT:-18473}:80'
+    healthcheck:
+      # Checks the whole chain: Caddy -> server -> database.
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1/api/health || exit 1']
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    depends_on:
+      server: { condition: service_healthy }
+
+volumes:
+  db: {}

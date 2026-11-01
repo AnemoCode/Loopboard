@@ -1,3 +1,11 @@
+# TRUSTED_PROXIES: ranges whose X-Forwarded-* headers are kept (e.g. "private_ranges" when another
+# reverse proxy sits in front). By default only loopback is trusted, so clients cannot spoof their IP.
+{
+	servers {
+		trusted_proxies static {$TRUSTED_PROXIES:127.0.0.1/32}
+	}
+}
+
 # SITE_ADDRESS: ":80" for plain HTTP (local / behind another proxy) or a domain like
 # "loopwise.example.com" for automatic HTTPS.
 {$SITE_ADDRESS::80} {
