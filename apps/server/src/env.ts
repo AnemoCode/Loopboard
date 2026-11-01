@@ -13,6 +13,12 @@ const schema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   LOG_LEVEL: z.string().default('info'),
+  /** A version is saved every this many ms while people edit (default 5 minutes). */
+  AUTOSAVE_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .default(5 * 60 * 1000),
   /** Only for automated end-to-end tests that sign up many users from one IP. */
   DISABLE_RATE_LIMIT: z.stringbool().default(false),
 });

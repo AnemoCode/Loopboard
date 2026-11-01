@@ -1,5 +1,5 @@
 import { Hocuspocus, type Document } from '@hocuspocus/server';
-import { and, desc, eq, gt, notInArray } from 'drizzle-orm';
+import { and, desc, eq, notInArray } from 'drizzle-orm';
 import * as Y from 'yjs';
 import { initDoc, repairDoc, toSnapshot, type ProjectSnapshot } from '@cld/model';
 import { atLeast, docName, projectIdFromDoc, type Role } from '@cld/shared';
@@ -16,15 +16,23 @@ export interface CollabContext {
   system?: boolean;
   /** Marks a version restore so the changelog logs a single entry. */
   restoreLabel?: string;
+  /** Marks an undo of a changelog entry (its summary). */
+  undoOf?: string;
 }
 
 const MAX_DOC_BYTES = 20 * 1024 * 1024;
-const AUTO_VERSION_INTERVAL_MS = 10 * 60 * 1000;
-const MAX_AUTO_VERSIONS = 100;
+/** How many autosaves to keep (≈ 25 hours of editing at the default 5-minute cadence). */
+const MAX_AUTO_VERSIONS = 300;
 
 export type Collab = ReturnType<typeof createCollab>;
 
-export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: string) => void }) {
+export function createCollab(
+  db: Db,
+  auth: Auth,
+  log: { warn: (o: object, m: string) => void },
+  /** Autosave cadence while people edit. */
+  autosaveMs = 5 * 60 * 1000,
+) {
   async function loadState(projectId: string): Promise<Uint8Array | null> {
     const rows = await db
       .select({ state: projectDocuments.state })
@@ -54,37 +62,62 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
         set: { state, sizeBytes: state.byteLength, updatedAt: new Date() },
       });
     await db.update(projects).set({ updatedAt: new Date() }).where(eq(projects.id, projectId));
-    // Automatic version at most every 10 minutes of activity; keep the latest 100.
-    const recent = await db
+    await autosave(projectId, state, userId);
+  }
+
+  /** Projects with edits waiting for their next 5-minute autosave. */
+  const pendingAutosaves = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /**
+   * Keep a version every 5 minutes while people edit: save now if the last version is older than
+   * that, otherwise schedule one for when the 5 minutes are up (so the latest edits are covered too).
+   */
+  async function autosave(projectId: string, state: Uint8Array, userId: string | null) {
+    const [last] = await db
+      .select({ createdAt: projectVersions.createdAt })
+      .from(projectVersions)
+      .where(eq(projectVersions.projectId, projectId))
+      .orderBy(desc(projectVersions.createdAt))
+      .limit(1);
+    const due = last ? last.createdAt.getTime() + autosaveMs : 0;
+    if (Date.now() < due) {
+      if (!pendingAutosaves.has(projectId)) {
+        const timer = setTimeout(
+          () => {
+            pendingAutosaves.delete(projectId);
+            void currentState(projectId)
+              .then((s) => s && autosave(projectId, s, userId))
+              .catch((err) => log.warn({ err, projectId }, 'autosave failed'));
+          },
+          due - Date.now() + 250,
+        );
+        timer.unref();
+        pendingAutosaves.set(projectId, timer);
+      }
+      return;
+    }
+    const exists = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+    if (!exists.length) return;
+    await db.insert(projectVersions).values({ projectId, state, kind: 'auto', createdBy: userId });
+    const keep = db
       .select({ id: projectVersions.id })
       .from(projectVersions)
+      .where(and(eq(projectVersions.projectId, projectId), eq(projectVersions.kind, 'auto')))
+      .orderBy(desc(projectVersions.createdAt))
+      .limit(MAX_AUTO_VERSIONS);
+    await db
+      .delete(projectVersions)
       .where(
         and(
           eq(projectVersions.projectId, projectId),
-          gt(projectVersions.createdAt, new Date(Date.now() - AUTO_VERSION_INTERVAL_MS)),
+          eq(projectVersions.kind, 'auto'),
+          notInArray(projectVersions.id, keep),
         ),
-      )
-      .limit(1);
-    if (!recent.length) {
-      await db
-        .insert(projectVersions)
-        .values({ projectId, state, kind: 'auto', createdBy: userId });
-      const keep = db
-        .select({ id: projectVersions.id })
-        .from(projectVersions)
-        .where(and(eq(projectVersions.projectId, projectId), eq(projectVersions.kind, 'auto')))
-        .orderBy(desc(projectVersions.createdAt))
-        .limit(MAX_AUTO_VERSIONS);
-      await db
-        .delete(projectVersions)
-        .where(
-          and(
-            eq(projectVersions.projectId, projectId),
-            eq(projectVersions.kind, 'auto'),
-            notInArray(projectVersions.id, keep),
-          ),
-        );
-    }
+      );
   }
 
   const hocuspocus = new Hocuspocus<CollabContext>({
@@ -132,7 +165,7 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
   async function withDocument(
     projectId: string,
     fn: (doc: Document) => void,
-    actor?: Pick<CollabContext, 'userId' | 'name' | 'restoreLabel'>,
+    actor?: Pick<CollabContext, 'userId' | 'name' | 'restoreLabel' | 'undoOf'>,
   ): Promise<void> {
     // The actor (if any) attributes the change in the changelog.
     const conn = await hocuspocus.openDirectConnection(docName(projectId), {
