@@ -72,3 +72,51 @@ test('the History panel shows who changed what, live, with moves grouped', async
   await lead.context.close();
   await mate.context.close();
 });
+
+test('changes can be undone from the History panel without touching other edits', async ({
+  browser,
+}) => {
+  const lead = await newUser(browser, 'Uma');
+  const mate = await newUser(browser, 'Ugo');
+  const id = await createProject(lead.page, 'Undo me');
+  const origin = new URL(lead.page.url()).origin;
+  await lead.page.request.post(`/api/projects/${id}/members`, {
+    data: { email: mate.email, role: 'editor' },
+    headers: { origin },
+  });
+  await openProject(mate.page, id);
+  await addVariable(mate.page, 'Births', 400, 300);
+  await addVariable(mate.page, 'Deaths', 750, 300);
+  await mate.page.mouse.dblclick(
+    ...(Object.values(await center(mate.page, variable(mate.page, 'Births'))) as [number, number]),
+  );
+  await mate.page.getByLabel('Variable name').first().fill('Birth rate');
+  await mate.page.keyboard.press('Enter');
+  await expect(variable(lead.page, 'Birth rate')).toHaveCount(1);
+
+  await lead.page.getByRole('tab', { name: 'History' }).click();
+  const history = lead.page.getByRole('list', { name: 'Change history' });
+  const entry = history.locator('li', { hasText: 'renamed “Births” to “Birth rate”' });
+  await entry.hover();
+  await entry.getByRole('button', { name: /^Undo:/ }).click();
+  await expect(lead.page.getByText('Change undone')).toBeVisible();
+
+  // Both people see the old name again; Deaths (a separate change) is untouched.
+  await expect(variable(mate.page, 'Births')).toHaveCount(1);
+  await expect(variable(lead.page, 'Deaths')).toHaveCount(1);
+  await expect(entry.getByText('Undone by Uma')).toBeVisible();
+  await expect(history.getByText('undid: renamed “Births” to “Birth rate”')).toBeVisible();
+  // Undoing the deletion of a variable brings it back.
+  await mate.page.mouse.click(
+    ...(Object.values(await center(mate.page, variable(mate.page, 'Deaths'))) as [number, number]),
+  );
+  await mate.page.keyboard.press('Delete');
+  await expect(variable(lead.page, 'Deaths')).toHaveCount(0);
+  const del = history.locator('li', { hasText: 'deleted variable “Deaths”' });
+  await del.hover();
+  await del.getByRole('button', { name: /^Undo:/ }).click();
+  await expect(variable(mate.page, 'Deaths')).toHaveCount(1);
+
+  await lead.context.close();
+  await mate.context.close();
+});

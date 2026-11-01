@@ -295,7 +295,7 @@ function VersionsDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }
       open
       onOpenChange={onOpenChange}
       title="Version history"
-      description="Autosaves are kept every 10 minutes while people edit."
+      description="A version is saved automatically every 5 minutes while people edit."
       wide
     >
       {canEdit && (
