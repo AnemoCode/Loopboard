@@ -50,7 +50,7 @@ export async function buildApp(env: Env, db: Db) {
   const collab = createCollab(db, auth, app.log);
   const publicOrigin = new URL(env.PUBLIC_URL).origin;
 
-  await app.register(rateLimit, { global: true, max: 600, timeWindow: '1 minute' });
+  if (!env.DISABLE_RATE_LIMIT) await app.register(rateLimit, { global: true, max: 600, timeWindow: '1 minute' });
   await app.register(websocket, { options: { maxPayload: 4 * 1024 * 1024 } });
 
   app.setErrorHandler((err: Error & { statusCode?: number; validation?: unknown }, req, reply) => {

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { HocuspocusProvider } from '@hocuspocus/provider';
+import { HocuspocusProvider, HocuspocusProviderWebsocket } from '@hocuspocus/provider';
 import WebSocket from 'ws';
 import * as Y from 'yjs';
 import { sql } from 'drizzle-orm';
@@ -39,12 +39,13 @@ class User {
     const set = res.headers.getSetCookie();
     if (set.length) this.cookie = set.map((c) => c.split(';')[0]).join('; ');
     const text = await res.text();
-    let json: unknown = null;
-    try {
-      json = text ? JSON.parse(text) : null;
-    } catch {
-      json = text;
-    }
+    const json: unknown = (() => {
+      try {
+        return text ? JSON.parse(text) : null;
+      } catch {
+        return text;
+      }
+    })();
     return { status: res.status, json: json as any, text, headers: res.headers };
   }
   async signUp() {
@@ -60,10 +61,10 @@ class User {
       }
     }
     const doc = new Y.Doc();
+    const socket = new HocuspocusProviderWebsocket({ url: `${base.replace('http', 'ws')}/collab`, WebSocketPolyfill: CookieWS });
     const state = { synced: false, scope: '' as string, failed: '' as string, closed: 0 };
     const provider = new HocuspocusProvider({
-      url: `${base.replace('http', 'ws')}/collab`,
-      WebSocketPolyfill: CookieWS,
+      websocketProvider: socket,
       name: docName(projectId),
       document: doc,
       token: 'session',
@@ -72,11 +73,16 @@ class User {
       onAuthenticationFailed: ({ reason }) => (state.failed = reason),
       onClose: () => state.closed++,
     });
+    // A provider sharing an explicit socket must be attached.
+    provider.attach();
     return {
       doc,
       provider,
       state,
-      destroy: () => provider.destroy(),
+      destroy: () => {
+        provider.destroy();
+        socket.destroy();
+      },
     };
   }
 }

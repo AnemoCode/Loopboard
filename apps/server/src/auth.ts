@@ -23,7 +23,7 @@ export function createAuth(env: Env, db: Db) {
     emailAndPassword: { enabled: true, minPasswordLength: 8, maxPasswordLength: 128, autoSignIn: true },
     socialProviders,
     session: { expiresIn: 60 * 60 * 24 * 30, updateAge: 60 * 60 * 24 },
-    rateLimit: { enabled: env.NODE_ENV === 'production', window: 60, max: 30 },
+    rateLimit: { enabled: env.NODE_ENV === 'production' && !env.DISABLE_RATE_LIMIT, window: 60, max: 30 },
     telemetry: { enabled: false },
     databaseHooks: {
       user: {

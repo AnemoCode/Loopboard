@@ -118,7 +118,8 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
   function disconnectUser(projectId: string, userId: string) {
     const doc = hocuspocus.documents.get(docName(projectId));
     for (const c of doc?.getConnections() ?? []) {
-      if ((c.context as CollabContext).userId === userId) c.close({ code: 4403, reason: 'Access changed' } as CloseEvent);
+      // Close the socket itself: the client reconnects and re-authenticates with its new permissions.
+      if ((c.context as CollabContext).userId === userId) c.webSocket.close(4403, 'Access changed');
     }
   }
 

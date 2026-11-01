@@ -13,6 +13,8 @@ const schema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   LOG_LEVEL: z.string().default('info'),
+  /** Only for automated end-to-end tests that sign up many users from one IP. */
+  DISABLE_RATE_LIMIT: z.stringbool().default(false),
 });
 
 export type Env = z.infer<typeof schema>;
