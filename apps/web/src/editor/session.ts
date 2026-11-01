@@ -18,12 +18,15 @@ export interface Session {
   ready: boolean;
   readOnly: boolean;
   subscribe(fn: () => void): () => void;
+  /** Fires when the server stored new changelog entries. */
+  onChanges(fn: () => void): () => void;
   destroy(): void;
 }
 
 export function createSession(projectId: string, me: Me): Session {
   const doc = new Y.Doc();
   const listeners = new Set<() => void>();
+  const changeListeners = new Set<() => void>();
   const emit = () => listeners.forEach((l) => l());
   const r = roots(doc);
   const undo = new Y.UndoManager([r.diagrams, r.variables], {
@@ -47,6 +50,10 @@ export function createSession(projectId: string, me: Me): Session {
     subscribe(fn) {
       listeners.add(fn);
       return () => listeners.delete(fn);
+    },
+    onChanges(fn) {
+      changeListeners.add(fn);
+      return () => changeListeners.delete(fn);
     },
     destroy() {
       session.provider.destroy();
@@ -92,6 +99,14 @@ export function createSession(projectId: string, me: Me): Session {
       unsynced = number;
       if (session.status === 'synced' || session.status === 'saving')
         updateStatus(number > 0 ? 'saving' : 'synced');
+    },
+    onStateless: ({ payload }) => {
+      try {
+        if ((JSON.parse(payload) as { type?: string }).type === 'changes')
+          changeListeners.forEach((l) => l());
+      } catch {
+        /* ignore unknown messages */
+      }
     },
     onStatus: ({ status }) => {
       if (status === WebSocketStatus.Disconnected && session.status !== 'denied')

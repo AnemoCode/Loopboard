@@ -19,6 +19,7 @@ export const keys = {
   members: (id: string) => ['members', id] as const,
   links: (id: string) => ['links', id] as const,
   versions: (id: string) => ['versions', id] as const,
+  changes: (id: string) => ['changes', id] as const,
 };
 
 export function useMe() {

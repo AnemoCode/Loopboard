@@ -121,6 +121,12 @@ function PaletteBody({ close }: { close: () => void }) {
         run: () => set({ panelOpen: true, panelTab: 'loops' }),
       },
       {
+        id: 'history',
+        label: 'Show change history',
+        group: 'Actions',
+        run: () => set({ panelOpen: true, panelTab: 'history' }),
+      },
+      {
         id: 'layers',
         label: 'Show layers',
         group: 'Actions',

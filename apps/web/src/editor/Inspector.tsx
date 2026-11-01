@@ -28,6 +28,7 @@ import { editable, placeLoopMarker } from './actions';
 import { threadPosition } from './canvas/CanvasOverlay';
 import { useEditorCtx } from './context';
 import { DesignPanel } from './DesignPanel';
+import { HistoryPanel } from './HistoryPanel';
 import { useDocView } from './docView';
 import { LOCAL } from './session';
 import { useEditor, type PanelTab } from './store';
@@ -37,6 +38,7 @@ const TABS: { id: PanelTab; label: string }[] = [
   { id: 'layers', label: 'Layers' },
   { id: 'loops', label: 'Loops' },
   { id: 'comments', label: 'Comments' },
+  { id: 'history', label: 'History' },
 ];
 
 export function Inspector() {
@@ -45,7 +47,7 @@ export function Inspector() {
   return (
     <aside
       aria-label="Side panel"
-      className="pointer-events-auto flex h-full w-80 shrink-0 flex-col border-l border-app bg-surface"
+      className="pointer-events-auto flex h-full w-[22rem] shrink-0 flex-col border-l border-app bg-surface"
     >
       <div className="flex items-center gap-0.5 border-b border-app px-2 py-1.5" role="tablist">
         {TABS.map((t) => (
@@ -55,7 +57,7 @@ export function Inspector() {
             aria-selected={tab === t.id}
             onClick={() => set({ panelTab: t.id })}
             className={cx(
-              'rounded-md px-2 py-1 text-[13px] font-medium transition-colors',
+              'rounded-md px-1.5 py-1 text-[13px] font-medium transition-colors',
               tab === t.id ? 'bg-surface-2 text-app' : 'text-muted hover:text-app',
             )}
           >
@@ -75,6 +77,7 @@ export function Inspector() {
         {tab === 'layers' && <LayersPanel />}
         {tab === 'loops' && <LoopsPanel />}
         {tab === 'comments' && <CommentsPanel />}
+        {tab === 'history' && <HistoryPanel />}
       </div>
     </aside>
   );

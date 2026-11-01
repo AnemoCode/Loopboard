@@ -32,7 +32,7 @@ export type Editing =
   | { kind: 'new-variable'; x: number; y: number; linkFrom?: string }
   | { kind: 'new-text'; x: number; y: number };
 
-export type PanelTab = 'design' | 'layers' | 'comments' | 'loops';
+export type PanelTab = 'design' | 'layers' | 'comments' | 'loops' | 'history';
 
 interface EditorState {
   diagramId: string | null;

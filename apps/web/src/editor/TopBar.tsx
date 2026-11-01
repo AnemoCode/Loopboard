@@ -7,6 +7,7 @@ import {
   FileUp,
   History,
   Keyboard,
+  ListChecks,
   Loader2,
   MoreHorizontal,
   PanelRight,
@@ -158,6 +159,12 @@ export function TopBar({ peers }: { peers: Peer[] }) {
               onSelect={() => fileRef.current?.click()}
             >
               Import into project…
+            </MenuItem>
+            <MenuItem
+              icon={<ListChecks className="size-4" />}
+              onSelect={() => set({ panelOpen: true, panelTab: 'history' })}
+            >
+              Change history
             </MenuItem>
             <MenuItem
               icon={<History className="size-4" />}
