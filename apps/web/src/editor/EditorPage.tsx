@@ -41,10 +41,25 @@ export default function EditorPage() {
 
   if (project.error) {
     const status = project.error instanceof ApiError ? project.error.status : 0;
-    return <NotFoundPage title={status === 404 ? 'Project not found' : 'Could not open project'} message={status === 404 ? "It doesn't exist or you don't have access." : project.error.message} />;
+    return (
+      <NotFoundPage
+        title={status === 404 ? 'Project not found' : 'Could not open project'}
+        message={
+          status === 404 ? "It doesn't exist or you don't have access." : project.error.message
+        }
+      />
+    );
   }
   if (!project.data || !session) return <Loading label="Opening project…" />;
-  return <EditorWithSession key={session.doc.guid} session={session} projectId={projectId} projectName={project.data.name} role={project.data.role} />;
+  return (
+    <EditorWithSession
+      key={session.doc.guid}
+      session={session}
+      projectId={projectId}
+      projectName={project.data.name}
+      role={project.data.role}
+    />
+  );
 }
 
 function Loading({ label }: { label: string }) {
@@ -56,7 +71,17 @@ function Loading({ label }: { label: string }) {
   );
 }
 
-function EditorWithSession({ session, projectId, projectName, role }: { session: Session; projectId: string; projectName: string; role: EditorCtx['role'] }) {
+function EditorWithSession({
+  session,
+  projectId,
+  projectName,
+  role,
+}: {
+  session: Session;
+  projectId: string;
+  projectName: string;
+  role: EditorCtx['role'];
+}) {
   const ready = useSyncExternalStore(session.subscribe, () => session.ready);
   const status = useSyncExternalStore(session.subscribe, () => session.status);
   const readOnly = useSyncExternalStore(session.subscribe, () => session.readOnly);
@@ -65,7 +90,10 @@ function EditorWithSession({ session, projectId, projectName, role }: { session:
 
   useEffect(() => {
     const publish = createPresencePublisher(session);
-    publish({ user: session.user, selection: [], gesture: null, cursor: null, editing: null }, true);
+    publish(
+      { user: session.user, selection: [], gesture: null, cursor: null, editing: null },
+      true,
+    );
   }, [session]);
 
   const ctx: EditorCtx = useMemo(
@@ -81,8 +109,10 @@ function EditorWithSession({ session, projectId, projectName, role }: { session:
     [projectId, projectName, role, session, store, ready, readOnly],
   );
 
-  if (status === 'denied') return <NotFoundPage title="No access" message="You no longer have access to this project." />;
-  if (!ready) return <Loading label={status === 'offline' ? 'Waiting for connection…' : 'Syncing…'} />;
+  if (status === 'denied')
+    return <NotFoundPage title="No access" message="You no longer have access to this project." />;
+  if (!ready)
+    return <Loading label={status === 'offline' ? 'Waiting for connection…' : 'Syncing…'} />;
   return (
     <EditorContext.Provider value={ctx}>
       <EditorLayout peers={peers} />
@@ -113,7 +143,9 @@ function EditorLayout({ peers }: { peers: ReturnType<typeof usePeers> }) {
     const d = diagramId ? view.snapshot.diagrams[diagramId] : undefined;
     if (!d) return;
     if (layerId && d.layers[layerId]) return;
-    const top = Object.values(d.layers).sort(byKey((l) => l.order)).reverse();
+    const top = Object.values(d.layers)
+      .sort(byKey((l) => l.order))
+      .reverse();
     set({ layerId: (top.find((l) => l.visible && !l.locked) ?? top[0])?.id ?? null });
   }, [diagramId, layerId, view, set]);
 
@@ -123,7 +155,8 @@ function EditorLayout({ peers }: { peers: ReturnType<typeof usePeers> }) {
   useEffect(() => {
     const { selection, diagramId: dId } = useEditor.getState();
     const d = dId ? view.snapshot.diagrams[dId] : undefined;
-    if (d && selection.some((id) => !d.elements[id])) set({ selection: selection.filter((id) => d.elements[id]) });
+    if (d && selection.some((id) => !d.elements[id]))
+      set({ selection: selection.filter((id) => d.elements[id]) });
   }, [view, set]);
 
   if (!diagramId || !view.snapshot.diagrams[diagramId]) return <Loading label="Loading diagram…" />;
@@ -143,7 +176,12 @@ function EditorLayout({ peers }: { peers: ReturnType<typeof usePeers> }) {
             </div>
             {!panelOpen && (
               <div className="absolute right-3 top-3">
-                <IconButton label="Show side panel" shortcut="⌘." className="border border-app bg-surface shadow-lg" onClick={() => set({ panelOpen: true })}>
+                <IconButton
+                  label="Show side panel"
+                  shortcut="⌘."
+                  className="border border-app bg-surface shadow-lg"
+                  onClick={() => set({ panelOpen: true })}
+                >
                   <PanelRightOpen className="size-4" />
                 </IconButton>
               </div>
@@ -156,4 +194,3 @@ function EditorLayout({ peers }: { peers: ReturnType<typeof usePeers> }) {
     </div>
   );
 }
-

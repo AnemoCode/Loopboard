@@ -1,17 +1,43 @@
 import { useEffect } from 'react';
 
-import { deleteSelection, duplicateSelection, fitBox, nudge, reorder, selectionBox, setPolarity, toggleDelay, zoomTo, copyPayload, pastePayload } from './actions';
+import {
+  deleteSelection,
+  duplicateSelection,
+  fitBox,
+  nudge,
+  reorder,
+  selectionBox,
+  setPolarity,
+  toggleDelay,
+  zoomTo,
+  copyPayload,
+  pastePayload,
+} from './actions';
 import type { EditorCtx } from './context';
 import { editor, useEditor, type Tool } from './store';
 import type { DiagramLayout } from '@cld/render';
 
-const TOOL_KEYS: Record<string, Tool> = { v: 'select', h: 'hand', n: 'variable', l: 'link', o: 'loop', r: 'shape', t: 'text', c: 'comment' };
+const TOOL_KEYS: Record<string, Tool> = {
+  v: 'select',
+  h: 'hand',
+  n: 'variable',
+  l: 'link',
+  o: 'loop',
+  r: 'shape',
+  t: 'text',
+  c: 'comment',
+};
 const EDIT_TOOLS = new Set<Tool>(['variable', 'link', 'loop', 'shape', 'text']);
 
-const isTyping = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
+const isTyping = (t: EventTarget | null) =>
+  !!(t as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
 
 /** Global keyboard shortcuts and clipboard handling for the editor. */
-export function useShortcuts(ctx: EditorCtx, getLayout: () => DiagramLayout, canvasSize: () => { w: number; h: number }) {
+export function useShortcuts(
+  ctx: EditorCtx,
+  getLayout: () => DiagramLayout,
+  canvasSize: () => { w: number; h: number },
+) {
   useEffect(() => {
     const set = useEditor.getState().set;
     const onKey = (e: KeyboardEvent) => {
@@ -44,6 +70,11 @@ export function useShortcuts(ctx: EditorCtx, getLayout: () => DiagramLayout, can
         if (ctx.canEdit) duplicateSelection(ctx);
         return;
       }
+      if (mod && (key === 'k' || key === 'f')) {
+        e.preventDefault();
+        set({ dialog: 'palette' });
+        return;
+      }
       if (mod && key === 'e') {
         e.preventDefault();
         set({ dialog: 'export' });
@@ -56,7 +87,10 @@ export function useShortcuts(ctx: EditorCtx, getLayout: () => DiagramLayout, can
       }
       if (mod && (key === ']' || key === '[')) {
         e.preventDefault();
-        reorder(ctx, key === ']' ? (e.shiftKey ? 'front' : 'forward') : e.shiftKey ? 'back' : 'backward');
+        reorder(
+          ctx,
+          key === ']' ? (e.shiftKey ? 'front' : 'forward') : e.shiftKey ? 'back' : 'backward',
+        );
         return;
       }
       if (mod && (key === '=' || key === '+' || key === '-' || key === '0')) {
@@ -73,12 +107,20 @@ export function useShortcuts(ctx: EditorCtx, getLayout: () => DiagramLayout, can
         e.preventDefault();
         const { w, h } = canvasSize();
         const layout = getLayout();
-        const box = e.code === 'Digit1' ? layout.bbox : selectionBox(layout, st.selection) ?? layout.bbox;
+        const box =
+          e.code === 'Digit1' ? layout.bbox : (selectionBox(layout, st.selection) ?? layout.bbox);
         set({ viewport: fitBox(box, w, h, e.code === 'Digit1' ? 1.5 : 2), followClientId: null });
         return;
       }
       if (key === 'escape') {
-        set({ selection: [], tool: 'select', draftComment: null, openThread: null, highlight: [], followClientId: null });
+        set({
+          selection: [],
+          tool: 'select',
+          draftComment: null,
+          openThread: null,
+          highlight: [],
+          followClientId: null,
+        });
         return;
       }
       if (key === 'delete' || key === 'backspace') {
@@ -90,11 +132,16 @@ export function useShortcuts(ctx: EditorCtx, getLayout: () => DiagramLayout, can
         if (!st.selection.length) return;
         e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
-        nudge(ctx, key === 'arrowleft' ? -step : key === 'arrowright' ? step : 0, key === 'arrowup' ? -step : key === 'arrowdown' ? step : 0);
+        nudge(
+          ctx,
+          key === 'arrowleft' ? -step : key === 'arrowright' ? step : 0,
+          key === 'arrowup' ? -step : key === 'arrowdown' ? step : 0,
+        );
         return;
       }
       if (key === 'enter' && st.selection.length === 1 && ctx.canEdit) {
-        const el = ctx.store.get().snapshot.diagrams[st.diagramId ?? '']?.elements[st.selection[0]!];
+        const el =
+          ctx.store.get().snapshot.diagrams[st.diagramId ?? '']?.elements[st.selection[0]!];
         if (el && (el.type === 'variable' || el.type === 'text' || el.type === 'shape')) {
           e.preventDefault();
           set({ editing: { kind: 'element', id: el.id } });
@@ -155,5 +202,3 @@ export function useShortcuts(ctx: EditorCtx, getLayout: () => DiagramLayout, can
     };
   }, [ctx, getLayout, canvasSize]);
 }
-
-
