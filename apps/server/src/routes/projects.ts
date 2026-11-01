@@ -51,15 +51,13 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
         .insert(projectDocuments)
         .values({ projectId: p!.id, state, sizeBytes: state.byteLength });
       if (versionKind)
-        await tx
-          .insert(projectVersions)
-          .values({
-            projectId: p!.id,
-            state,
-            kind: versionKind,
-            label: 'Imported',
-            createdBy: ownerId,
-          });
+        await tx.insert(projectVersions).values({
+          projectId: p!.id,
+          state,
+          kind: versionKind,
+          label: 'Imported',
+          createdBy: ownerId,
+        });
       return p!;
     });
   }
@@ -94,7 +92,7 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
     '/api/projects',
     { config: { rateLimit: { max: 60, timeWindow: '1 hour' } } },
     async (req, reply) => {
-      const me = ctx.requireUser(req);
+      const me = ctx.requireAccount(req);
       const body = createProjectBody.parse(req.body);
       const doc = new Y.Doc();
       if (body.snapshot !== undefined) replaceContent(doc, parseSnapshot(body.snapshot));
@@ -125,6 +123,7 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
   });
 
   app.patch('/api/projects/:id', async (req) => {
+    ctx.requireAccount(req);
     const id = idParam(req.params);
     await ctx.requireRole(req, id, 'editor');
     const { name } = updateProjectBody.parse(req.body);
@@ -133,6 +132,7 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
   });
 
   app.delete('/api/projects/:id', async (req) => {
+    ctx.requireAccount(req);
     const id = idParam(req.params);
     await ctx.requireRole(req, id, 'owner');
     collab.closeProject(id);
@@ -141,7 +141,7 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
   });
 
   app.post('/api/projects/:id/duplicate', async (req, reply) => {
-    const me = ctx.requireUser(req);
+    const me = ctx.requireAccount(req);
     const id = idParam(req.params);
     await ctx.requireRole(req, id, 'viewer');
     const [p] = await db.select().from(projects).where(eq(projects.id, id));
@@ -242,15 +242,13 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
     const snap = await loadVersion(id, (req.params as { vid: string }).vid);
     const current = await collab.currentState(id);
     if (current)
-      await db
-        .insert(projectVersions)
-        .values({
-          projectId: id,
-          state: current,
-          label: 'Before restore',
-          kind: 'restore',
-          createdBy: me.id,
-        });
+      await db.insert(projectVersions).values({
+        projectId: id,
+        state: current,
+        label: 'Before restore',
+        kind: 'restore',
+        createdBy: me.id,
+      });
     await collab.withDocument(id, (doc) => replaceContent(doc, snap, 'restore'));
     return { ok: true };
   });
