@@ -1,4 +1,13 @@
-import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Lock, Unlock, Spline } from 'lucide-react';
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Italic,
+  Lock,
+  Unlock,
+  Spline,
+} from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import {
@@ -39,7 +48,14 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** Text input that commits on blur/Enter (avoids one undo step per keystroke). */
-function CommitInput({ value, onCommit, placeholder, disabled, multiline, ariaLabel }: {
+function CommitInput({
+  value,
+  onCommit,
+  placeholder,
+  disabled,
+  multiline,
+  ariaLabel,
+}: {
   value: string;
   onCommit: (v: string) => void;
   placeholder?: string;
@@ -73,7 +89,8 @@ function CommitInput({ value, onCommit, placeholder, disabled, multiline, ariaLa
   return multiline ? <Textarea rows={3} {...common} /> : <Input className="h-8" {...common} />;
 }
 
-const common = <T,>(values: T[]): T | undefined => (values.length && values.every((v) => v === values[0]) ? values[0] : undefined);
+const common = <T,>(values: T[]): T | undefined =>
+  values.length && values.every((v) => v === values[0]) ? values[0] : undefined;
 
 export function DesignPanel() {
   const ctx = useEditorCtx();
@@ -81,7 +98,9 @@ export function DesignPanel() {
   const { diagramId, selection } = useEditor();
   const set = useEditor((s) => s.set);
   const diagram = diagramId ? view.snapshot.diagrams[diagramId] : undefined;
-  const selected = selection.map((id) => diagram?.elements[id]).filter((e): e is DiagramElement => !!e);
+  const selected = selection
+    .map((id) => diagram?.elements[id])
+    .filter((e): e is DiagramElement => !!e);
   const ids = selected.map((e) => e.id);
   const canChange = editable(ctx, ids).length > 0;
 
@@ -93,7 +112,9 @@ export function DesignPanel() {
   const style = (k: keyof Style) => common(selected.map((e) => e.style?.[k]));
   const setStyle = (patch: Style) => applyStyle(ctx, ids, patch);
   const hasText = selected.some((e) => e.type !== 'link');
-  const hasBox = selected.some((e) => e.type === 'variable' || e.type === 'shape' || e.type === 'text');
+  const hasBox = selected.some(
+    (e) => e.type === 'variable' || e.type === 'shape' || e.type === 'text',
+  );
   const locked = selected.every((e) => e.locked);
   const allLinks = selected.every((e) => e.type === 'link');
 
@@ -101,7 +122,15 @@ export function DesignPanel() {
     <div className={cx(!canChange && !locked && 'pointer-events-none opacity-60')}>
       <div className="flex items-center justify-between px-4 pt-4">
         <span className="text-sm font-medium text-app">
-          {selected.length > 1 ? `${selected.length} elements` : { variable: 'Variable', link: 'Causal link', loop: 'Loop marker', shape: 'Shape', text: 'Text' }[only!]}
+          {selected.length > 1
+            ? `${selected.length} elements`
+            : {
+                variable: 'Variable',
+                link: 'Causal link',
+                loop: 'Loop marker',
+                shape: 'Shape',
+                text: 'Text',
+              }[only!]}
         </span>
         {ctx.canEdit && (
           <button
@@ -110,7 +139,15 @@ export function DesignPanel() {
             title={locked ? 'Unlock' : 'Lock (prevents moving and editing)'}
             onClick={() =>
               // Lock toggling must also work on locked elements, so it bypasses editable().
-              ctx.session.doc.transact(() => ids.forEach((id) => updateElement(ctx.session.doc, diagram.id, id, { locked: locked ? undefined : true })), LOCAL)
+              ctx.session.doc.transact(
+                () =>
+                  ids.forEach((id) =>
+                    updateElement(ctx.session.doc, diagram.id, id, {
+                      locked: locked ? undefined : true,
+                    }),
+                  ),
+                LOCAL,
+              )
             }
           >
             {locked ? <Lock className="size-4" /> : <Unlock className="size-4" />}
@@ -118,7 +155,9 @@ export function DesignPanel() {
         )}
       </div>
 
-      {only === 'variable' && selected.length === 1 && <VariableSection node={selected[0] as VariableNode} />}
+      {only === 'variable' && selected.length === 1 && (
+        <VariableSection node={selected[0] as VariableNode} />
+      )}
       {only === 'link' && <LinkSection links={selected as Link[]} />}
       {only === 'loop' && selected.length === 1 && <LoopSection loop={selected[0] as LoopMarker} />}
 
@@ -152,7 +191,11 @@ export function DesignPanel() {
 
       {hasText && (
         <Section title="Text">
-          <Swatches colors={PALETTE} value={style('textColor') as string | undefined} onChange={(c) => setStyle({ textColor: c ?? undefined })} />
+          <Swatches
+            colors={PALETTE}
+            value={style('textColor') as string | undefined}
+            onChange={(c) => setStyle({ textColor: c ?? undefined })}
+          />
           <div className="flex items-center gap-2">
             <Select
               ariaLabel="Font"
@@ -169,23 +212,53 @@ export function DesignPanel() {
               ariaLabel="Font size"
               value={String(style('fontSize') ?? (only === 'loop' ? '' : 12))}
               onChange={(v) => setStyle({ fontSize: v ? Number(v) : undefined })}
-              options={[...(only === 'loop' ? [{ value: '', label: 'Auto' }] : []), ...[10, 11, 12, 14, 16, 18, 20, 24, 32, 40].map((n) => ({ value: String(n), label: String(n) }))]}
+              options={[
+                ...(only === 'loop' ? [{ value: '', label: 'Auto' }] : []),
+                ...[10, 11, 12, 14, 16, 18, 20, 24, 32, 40].map((n) => ({
+                  value: String(n),
+                  label: String(n),
+                })),
+              ]}
               className="w-20"
             />
           </div>
           <div className="flex gap-1">
-            <ToggleIcon label="Bold" active={!!style('bold')} onClick={() => setStyle({ bold: style('bold') ? undefined : true })}>
+            <ToggleIcon
+              label="Bold"
+              active={!!style('bold')}
+              onClick={() => setStyle({ bold: style('bold') ? undefined : true })}
+            >
               <Bold className="size-4" />
             </ToggleIcon>
-            <ToggleIcon label="Italic" active={!!style('italic')} onClick={() => setStyle({ italic: style('italic') ? undefined : true })}>
+            <ToggleIcon
+              label="Italic"
+              active={!!style('italic')}
+              onClick={() => setStyle({ italic: style('italic') ? undefined : true })}
+            >
               <Italic className="size-4" />
             </ToggleIcon>
             {hasBox && (
               <>
                 <span className="mx-1 w-px bg-[var(--border)]" />
                 {(['left', 'center', 'right'] as const).map((a) => (
-                  <ToggleIcon key={a} label={`Align ${a}`} active={(style('align') ?? (only === 'text' || only === 'variable' || only === 'shape' ? 'center' : '')) === a} onClick={() => setStyle({ align: a })}>
-                    {a === 'left' ? <AlignLeft className="size-4" /> : a === 'center' ? <AlignCenter className="size-4" /> : <AlignRight className="size-4" />}
+                  <ToggleIcon
+                    key={a}
+                    label={`Align ${a}`}
+                    active={
+                      (style('align') ??
+                        (only === 'text' || only === 'variable' || only === 'shape'
+                          ? 'center'
+                          : '')) === a
+                    }
+                    onClick={() => setStyle({ align: a })}
+                  >
+                    {a === 'left' ? (
+                      <AlignLeft className="size-4" />
+                    ) : a === 'center' ? (
+                      <AlignCenter className="size-4" />
+                    ) : (
+                      <AlignRight className="size-4" />
+                    )}
                   </ToggleIcon>
                 ))}
               </>
@@ -197,10 +270,20 @@ export function DesignPanel() {
       {hasBox && (
         <Section title="Fill & border">
           <Row label="Fill">
-            <Swatches colors={FILL_PALETTE} allowNone value={style('fill') as string | null | undefined} onChange={(c) => setStyle({ fill: c })} />
+            <Swatches
+              colors={FILL_PALETTE}
+              allowNone
+              value={style('fill') as string | null | undefined}
+              onChange={(c) => setStyle({ fill: c })}
+            />
           </Row>
           <Row label="Border">
-            <Swatches colors={PALETTE} allowNone value={style('stroke') as string | null | undefined} onChange={(c) => setStyle({ stroke: c })} />
+            <Swatches
+              colors={PALETTE}
+              allowNone
+              value={style('stroke') as string | null | undefined}
+              onChange={(c) => setStyle({ stroke: c })}
+            />
           </Row>
           <Row label="Width">
             <div className="flex gap-2">
@@ -211,7 +294,10 @@ export function DesignPanel() {
                 options={[0.75, 1.25, 2, 3, 4].map((n) => ({ value: String(n), label: `${n}px` }))}
                 className="flex-1"
               />
-              <DashSelect value={style('dash') as Style['dash']} onChange={(dash) => setStyle({ dash })} />
+              <DashSelect
+                value={style('dash') as Style['dash']}
+                onChange={(dash) => setStyle({ dash })}
+              />
             </div>
           </Row>
         </Section>
@@ -219,16 +305,28 @@ export function DesignPanel() {
 
       {(allLinks || only === 'loop') && (
         <Section title={allLinks ? 'Arrow' : 'Color'}>
-          <Swatches colors={PALETTE} value={style('color') as string | undefined} onChange={(c) => setStyle({ color: c ?? undefined })} />
+          <Swatches
+            colors={PALETTE}
+            value={style('color') as string | undefined}
+            onChange={(c) => setStyle({ color: c ?? undefined })}
+          />
           <div className="flex gap-2">
             <Select
               ariaLabel="Line width"
               value={String(style('width') ?? (allLinks ? 1.25 : 1.75))}
               onChange={(v) => setStyle({ width: Number(v) })}
-              options={[0.75, 1.25, 1.75, 2.5, 3.5].map((n) => ({ value: String(n), label: `${n}px` }))}
+              options={[0.75, 1.25, 1.75, 2.5, 3.5].map((n) => ({
+                value: String(n),
+                label: `${n}px`,
+              }))}
               className="flex-1"
             />
-            {allLinks && <DashSelect value={style('dash') as Style['dash']} onChange={(dash) => setStyle({ dash })} />}
+            {allLinks && (
+              <DashSelect
+                value={style('dash') as Style['dash']}
+                onChange={(dash) => setStyle({ dash })}
+              />
+            )}
           </div>
           {allLinks && (
             <Row label="Head">
@@ -250,12 +348,19 @@ export function DesignPanel() {
       <Section title="Arrange">
         <div className="grid grid-cols-2 gap-2 text-xs">
           {(['front', 'back'] as const).map((op) => (
-            <button key={op} className="rounded-lg border border-app px-2 py-1.5 text-app hover:bg-surface-2" onClick={() => reorder(ctx, op)}>
+            <button
+              key={op}
+              className="rounded-lg border border-app px-2 py-1.5 text-app hover:bg-surface-2"
+              onClick={() => reorder(ctx, op)}
+            >
               {op === 'front' ? 'Bring to front' : 'Send to back'}
             </button>
           ))}
         </div>
-        <button className="w-full rounded-lg border border-app px-2 py-1.5 text-xs text-app hover:bg-surface-2" onClick={() => set({ selection: [] })}>
+        <button
+          className="w-full rounded-lg border border-app px-2 py-1.5 text-xs text-app hover:bg-surface-2"
+          onClick={() => set({ selection: [] })}
+        >
           Deselect
         </button>
       </Section>
@@ -263,21 +368,42 @@ export function DesignPanel() {
   );
 }
 
-function ToggleIcon({ label, active, onClick, children }: { label: string; active: boolean; onClick: () => void; children: ReactNode }) {
+function ToggleIcon({
+  label,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
     <button
       aria-label={label}
       title={label}
       aria-pressed={active}
       onClick={onClick}
-      className={cx('flex size-8 items-center justify-center rounded-lg', active ? 'bg-accent-100 text-accent-700 dark:bg-accent-500/20 dark:text-accent-300' : 'text-app hover:bg-surface-2')}
+      className={cx(
+        'flex size-8 items-center justify-center rounded-lg',
+        active
+          ? 'bg-accent-100 text-accent-700 dark:bg-accent-500/20 dark:text-accent-300'
+          : 'text-app hover:bg-surface-2',
+      )}
     >
       {children}
     </button>
   );
 }
 
-function DashSelect({ value, onChange }: { value: Style['dash']; onChange: (d: Style['dash']) => void }) {
+function DashSelect({
+  value,
+  onChange,
+}: {
+  value: Style['dash'];
+  onChange: (d: Style['dash']) => void;
+}) {
   return (
     <Select
       ariaLabel="Line style"
@@ -298,7 +424,9 @@ function VariableSection({ node }: { node: VariableNode }) {
   const view = useDocView(ctx.store);
   const v = view.variables[node.variableId];
   if (!v) return null;
-  const usages = view.diagrams.filter((d) => Object.values(d.elements).some((e) => e.type === 'variable' && e.variableId === v.id));
+  const usages = view.diagrams.filter((d) =>
+    Object.values(d.elements).some((e) => e.type === 'variable' && e.variableId === v.id),
+  );
   return (
     <Section title="Variable">
       <CommitInput
@@ -307,11 +435,29 @@ function VariableSection({ node }: { node: VariableNode }) {
         disabled={!ctx.canEdit}
         onCommit={(name) => {
           const res = renameVariable(ctx.session.doc, v.id, name, LOCAL);
-          if (!res.ok) toast.error(res.reason === 'duplicate' ? `A variable called “${name.trim()}” already exists` : 'Names cannot be empty');
+          if (!res.ok)
+            toast.error(
+              res.reason === 'duplicate'
+                ? `A variable called “${name.trim()}” already exists`
+                : 'Names cannot be empty',
+            );
         }}
       />
-      <CommitInput ariaLabel="Units" placeholder="Units (optional)" value={v.units ?? ''} disabled={!ctx.canEdit} onCommit={(units) => updateVariable(ctx.session.doc, v.id, { units }, LOCAL)} />
-      <CommitInput ariaLabel="Notes" multiline placeholder="Notes (optional)" value={v.notes ?? ''} disabled={!ctx.canEdit} onCommit={(notes) => updateVariable(ctx.session.doc, v.id, { notes }, LOCAL)} />
+      <CommitInput
+        ariaLabel="Units"
+        placeholder="Units (optional)"
+        value={v.units ?? ''}
+        disabled={!ctx.canEdit}
+        onCommit={(units) => updateVariable(ctx.session.doc, v.id, { units }, LOCAL)}
+      />
+      <CommitInput
+        ariaLabel="Notes"
+        multiline
+        placeholder="Notes (optional)"
+        value={v.notes ?? ''}
+        disabled={!ctx.canEdit}
+        onCommit={(notes) => updateVariable(ctx.session.doc, v.id, { notes }, LOCAL)}
+      />
       {(node.isShadow || usages.length > 1) && (
         <p className="text-xs text-muted">
           {node.isShadow ? 'Shadow copy. ' : ''}Used in {usages.map((d) => d.name).join(', ')}.
@@ -332,8 +478,16 @@ function LinkSection({ links }: { links: Link[] }) {
         value={polarity === undefined ? null : (polarity ?? 'none')}
         onChange={(p) => patchElements(ctx, ids, { polarity: p === 'none' ? null : p })}
         options={[
-          { value: '+', label: <span className="text-base font-bold">+</span>, title: 'Positive (same direction)' },
-          { value: '-', label: <span className="text-base font-bold">–</span>, title: 'Negative (opposite direction)' },
+          {
+            value: '+',
+            label: <span className="text-base font-bold">+</span>,
+            title: 'Positive (same direction)',
+          },
+          {
+            value: '-',
+            label: <span className="text-base font-bold">–</span>,
+            title: 'Negative (opposite direction)',
+          },
           { value: '?', label: <span className="font-bold">?</span>, title: 'Unknown' },
           { value: 'none', label: 'None', title: 'No polarity' },
         ]}
@@ -342,13 +496,27 @@ function LinkSection({ links }: { links: Link[] }) {
         <span>
           Delay mark <span className="text-xs text-muted">(‖)</span>
         </span>
-        <input type="checkbox" className="size-4 accent-[var(--ring)]" checked={delay} onChange={(e) => patchElements(ctx, ids, { delay: e.target.checked || undefined })} />
+        <input
+          type="checkbox"
+          className="size-4 accent-[var(--ring)]"
+          checked={delay}
+          onChange={(e) => patchElements(ctx, ids, { delay: e.target.checked || undefined })}
+        />
       </label>
       {links.length === 1 && (
-        <CommitInput ariaLabel="Link label" placeholder="Label (optional)" value={links[0]!.label ?? ''} disabled={!ctx.canEdit} onCommit={(label) => patchElements(ctx, ids, { label: label.trim() || undefined })} />
+        <CommitInput
+          ariaLabel="Link label"
+          placeholder="Label (optional)"
+          value={links[0]!.label ?? ''}
+          disabled={!ctx.canEdit}
+          onCommit={(label) => patchElements(ctx, ids, { label: label.trim() || undefined })}
+        />
       )}
       {links.some((l) => l.control) && (
-        <button className="flex items-center gap-1.5 text-xs text-accent-600 hover:underline dark:text-accent-300" onClick={() => patchElements(ctx, ids, { control: null })}>
+        <button
+          className="flex items-center gap-1.5 text-xs text-accent-600 hover:underline dark:text-accent-300"
+          onClick={() => patchElements(ctx, ids, { control: null })}
+        >
           <Spline className="size-3.5" /> Straighten
         </button>
       )}
@@ -364,7 +532,10 @@ function LoopSection({ loop }: { loop: LoopMarker }) {
         value={loop.kind}
         onChange={(kind) => {
           const prefixed = /^[RB]\d*$/.test(loop.label) && kind !== 'custom';
-          patchElements(ctx, [loop.id], { kind, ...(prefixed ? { label: kind + loop.label.slice(1) } : {}) });
+          patchElements(ctx, [loop.id], {
+            kind,
+            ...(prefixed ? { label: kind + loop.label.slice(1) } : {}),
+          });
         }}
         options={[
           { value: 'R', label: 'Reinforcing', title: 'Reinforcing (R)' },
@@ -385,10 +556,23 @@ function LoopSection({ loop }: { loop: LoopMarker }) {
         />
       </Row>
       <Row label="Label">
-        <CommitInput ariaLabel="Loop label" value={loop.label} disabled={!ctx.canEdit} onCommit={(label) => patchElements(ctx, [loop.id], { label: label.trim().slice(0, 12) || loop.label })} />
+        <CommitInput
+          ariaLabel="Loop label"
+          value={loop.label}
+          disabled={!ctx.canEdit}
+          onCommit={(label) =>
+            patchElements(ctx, [loop.id], { label: label.trim().slice(0, 12) || loop.label })
+          }
+        />
       </Row>
       <Row label="Name">
-        <CommitInput ariaLabel="Loop name" placeholder="e.g. Growth engine" value={loop.name ?? ''} disabled={!ctx.canEdit} onCommit={(name) => patchElements(ctx, [loop.id], { name: name.trim() || undefined })} />
+        <CommitInput
+          ariaLabel="Loop name"
+          placeholder="e.g. Growth engine"
+          value={loop.name ?? ''}
+          disabled={!ctx.canEdit}
+          onCommit={(name) => patchElements(ctx, [loop.id], { name: name.trim() || undefined })}
+        />
       </Row>
     </Section>
   );
@@ -414,7 +598,10 @@ function DiagramInfo() {
           <dd className="text-right font-medium text-app">{count('link')}</dd>
           <dt className="text-muted">Feedback loops</dt>
           <dd className="text-right font-medium text-app">
-            <button className="text-accent-600 hover:underline dark:text-accent-300" onClick={() => set({ panelTab: 'loops' })}>
+            <button
+              className="text-accent-600 hover:underline dark:text-accent-300"
+              onClick={() => set({ panelTab: 'loops' })}
+            >
               {loops}
             </button>
           </dd>
@@ -423,8 +610,14 @@ function DiagramInfo() {
       <Section title="Tips">
         <ul className="space-y-2 text-sm text-muted">
           <li>Double-click the canvas to add a variable.</li>
-          <li>Hover a variable and drag a blue dot to draw a link. Drop on empty space to create a new variable.</li>
-          <li>Select a link and press <b className="text-app">+</b> or <b className="text-app">–</b> to set its polarity, <b className="text-app">D</b> for a delay.</li>
+          <li>
+            Hover a variable and drag a blue dot to draw a link. Drop on empty space to create a new
+            variable.
+          </li>
+          <li>
+            Select a link and press <b className="text-app">+</b> or <b className="text-app">–</b>{' '}
+            to set its polarity, <b className="text-app">D</b> for a delay.
+          </li>
           <li>Drag the dot in the middle of a link to curve it.</li>
         </ul>
       </Section>

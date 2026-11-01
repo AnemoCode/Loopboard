@@ -10,6 +10,7 @@ import {
   Loader2,
   MoreHorizontal,
   PanelRight,
+  Search,
   Pencil,
   Plus,
   Redo2,
@@ -20,11 +21,28 @@ import {
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
-import { addDiagram, appendSnapshot, deleteDiagram, duplicateDiagram, renameDiagram } from '@cld/model';
+import {
+  addDiagram,
+  appendSnapshot,
+  deleteDiagram,
+  duplicateDiagram,
+  renameDiagram,
+} from '@cld/model';
 import { ROLE_LABELS } from '@cld/shared';
 import { LogoMark } from '../components/Logo';
 import { UserMenu } from '../components/UserMenu';
-import { Avatar, Button, cx, IconButton, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, Tooltip } from '../components/ui';
+import {
+  Avatar,
+  Button,
+  cx,
+  IconButton,
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuSeparator,
+  MenuTrigger,
+  Tooltip,
+} from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { ACCEPTED_FILES, readDiagramFile } from '../lib/files';
 import { keys } from '../lib/queries';
@@ -58,7 +76,9 @@ export function TopBar({ peers }: { peers: Peer[] }) {
       const loaded = await readDiagramFile(file);
       const ids = appendSnapshot(session.doc, loaded.snapshot, LOCAL);
       if (ids[0]) set({ diagramId: ids[0], selection: [] });
-      toast.success(`Imported ${ids.length} diagram${ids.length === 1 ? '' : 's'} from ${file.name}`);
+      toast.success(
+        `Imported ${ids.length} diagram${ids.length === 1 ? '' : 's'} from ${file.name}`,
+      );
     } catch (e) {
       toast.error(errorMessage(e));
     }
@@ -67,17 +87,33 @@ export function TopBar({ peers }: { peers: Peer[] }) {
   return (
     <header className="pointer-events-auto flex h-12 items-center gap-2 border-b border-app bg-surface px-2 sm:px-3">
       <Tooltip content="All projects">
-        <Link to="/" aria-label="All projects" className="shrink-0 rounded-lg p-1 hover:bg-surface-2">
+        <Link
+          to="/"
+          aria-label="All projects"
+          className="shrink-0 rounded-lg p-1 hover:bg-surface-2"
+        >
           <LogoMark size={26} />
         </Link>
       </Tooltip>
       <ProjectTitle />
       {canEdit && (
         <div className="hidden items-center sm:flex">
-          <IconButton size="sm" label="Undo" shortcut="⌘Z" disabled={!session.undo.canUndo()} onClick={() => session.undo.undo()}>
+          <IconButton
+            size="sm"
+            label="Undo"
+            shortcut="⌘Z"
+            disabled={!session.undo.canUndo()}
+            onClick={() => session.undo.undo()}
+          >
             <Undo2 className="size-4" />
           </IconButton>
-          <IconButton size="sm" label="Redo" shortcut="⇧⌘Z" disabled={!session.undo.canRedo()} onClick={() => session.undo.redo()}>
+          <IconButton
+            size="sm"
+            label="Redo"
+            shortcut="⇧⌘Z"
+            disabled={!session.undo.canRedo()}
+            onClick={() => session.undo.redo()}
+          >
             <Redo2 className="size-4" />
           </IconButton>
         </div>
@@ -86,7 +122,11 @@ export function TopBar({ peers }: { peers: Peer[] }) {
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <SyncBadge status={status} />
         <Presence peers={peers} />
-        {!canEdit && <span className="hidden rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted md:inline">{ROLE_LABELS[role]}</span>}
+        {!canEdit && (
+          <span className="hidden rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted md:inline">
+            {ROLE_LABELS[role]}
+          </span>
+        )}
         <Button size="sm" variant="primary" onClick={() => set({ dialog: 'share' })}>
           <Share2 className="size-4" />
           <span className="hidden sm:inline">Share</span>
@@ -98,12 +138,49 @@ export function TopBar({ peers }: { peers: Peer[] }) {
             </button>
           </MenuTrigger>
           <MenuContent>
-            <MenuItem icon={<Download className="size-4" />} shortcut="⌘E" onSelect={() => set({ dialog: 'export' })}>Export…</MenuItem>
-            <MenuItem icon={<FileUp className="size-4" />} disabled={!canEdit} onSelect={() => fileRef.current?.click()}>Import into project…</MenuItem>
-            <MenuItem icon={<History className="size-4" />} onSelect={() => set({ dialog: 'versions' })}>Version history</MenuItem>
+            <MenuItem
+              icon={<Search className="size-4" />}
+              shortcut="⌘K"
+              onSelect={() => set({ dialog: 'palette' })}
+            >
+              Search…
+            </MenuItem>
+            <MenuItem
+              icon={<Download className="size-4" />}
+              shortcut="⌘E"
+              onSelect={() => set({ dialog: 'export' })}
+            >
+              Export…
+            </MenuItem>
+            <MenuItem
+              icon={<FileUp className="size-4" />}
+              disabled={!canEdit}
+              onSelect={() => fileRef.current?.click()}
+            >
+              Import into project…
+            </MenuItem>
+            <MenuItem
+              icon={<History className="size-4" />}
+              onSelect={() => set({ dialog: 'versions' })}
+            >
+              Version history
+            </MenuItem>
             <MenuSeparator />
-            <MenuItem icon={<PanelRight className="size-4" />} shortcut="⌘." checked={panelOpen} onSelect={() => set({ panelOpen: !panelOpen })}>Show side panel</MenuItem>
-            <MenuItem icon={<Keyboard className="size-4" />} shortcut="?" onSelect={() => set({ dialog: 'shortcuts' })}>Keyboard shortcuts</MenuItem>
+            <MenuItem
+              icon={<PanelRight className="size-4" />}
+              shortcut="⌘."
+              checked={panelOpen}
+              onSelect={() => set({ panelOpen: !panelOpen })}
+            >
+              Show side panel
+            </MenuItem>
+            <MenuItem
+              icon={<Keyboard className="size-4" />}
+              shortcut="?"
+              onSelect={() => set({ dialog: 'shortcuts' })}
+            >
+              Keyboard shortcuts
+            </MenuItem>
           </MenuContent>
         </Menu>
         <UserMenu />
@@ -135,7 +212,10 @@ function ProjectTitle() {
     if (!name || name === projectName) return setValue(projectName);
     try {
       await api(`/projects/${projectId}`, { method: 'PATCH', body: { name } });
-      await Promise.all([qc.invalidateQueries({ queryKey: keys.project(projectId) }), qc.invalidateQueries({ queryKey: keys.projects })]);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: keys.project(projectId) }),
+        qc.invalidateQueries({ queryKey: keys.projects }),
+      ]);
     } catch (e) {
       toast.error(errorMessage(e));
       setValue(projectName);
@@ -193,7 +273,10 @@ function DiagramTabs({ peers }: { peers: Peer[] }) {
   };
 
   return (
-    <nav aria-label="Diagrams" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none]">
+    <nav
+      aria-label="Diagrams"
+      className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none]"
+    >
       {view.diagrams.map((d) => {
         const active = d.id === diagramId;
         const here = uniqueUsers(peers.filter((p) => p.diagramId === d.id));
@@ -217,20 +300,38 @@ function DiagramTabs({ peers }: { peers: Peer[] }) {
         return (
           <div
             key={d.id}
-            className={cx('group flex h-8 shrink-0 items-center rounded-lg text-sm transition-colors', active ? 'bg-surface-2 font-medium text-app' : 'text-muted hover:bg-surface-2 hover:text-app')}
+            className={cx(
+              'group flex h-8 shrink-0 items-center rounded-lg text-sm transition-colors',
+              active
+                ? 'bg-surface-2 font-medium text-app'
+                : 'text-muted hover:bg-surface-2 hover:text-app',
+            )}
           >
             <button
               role="tab"
               aria-selected={active}
               className="flex h-full items-center gap-1.5 pl-3 pr-2"
-              onClick={() => set({ diagramId: d.id, selection: [], editing: null, openThread: null, draftComment: null })}
+              onClick={() =>
+                set({
+                  diagramId: d.id,
+                  selection: [],
+                  editing: null,
+                  openThread: null,
+                  draftComment: null,
+                })
+              }
               onDoubleClick={() => startRename(d.id, d.name)}
             >
               <span className="max-w-40 truncate">{d.name}</span>
               {here.length > 0 && (
                 <span className="flex -space-x-1">
                   {here.slice(0, 3).map((p) => (
-                    <span key={p.user.id} className="size-2 rounded-full ring-1 ring-[var(--surface)]" style={{ background: p.user.color }} title={p.user.name} />
+                    <span
+                      key={p.user.id}
+                      className="size-2 rounded-full ring-1 ring-[var(--surface)]"
+                      style={{ background: p.user.color }}
+                      title={p.user.name}
+                    />
                   ))}
                 </span>
               )}
@@ -238,12 +339,20 @@ function DiagramTabs({ peers }: { peers: Peer[] }) {
             {active && canEdit && (
               <Menu>
                 <MenuTrigger asChild>
-                  <button aria-label={`${d.name} options`} className="mr-1 rounded p-0.5 text-muted hover:text-app">
+                  <button
+                    aria-label={`${d.name} options`}
+                    className="mr-1 rounded p-0.5 text-muted hover:text-app"
+                  >
                     <ChevronDown className="size-3.5" />
                   </button>
                 </MenuTrigger>
                 <MenuContent align="start">
-                  <MenuItem icon={<Pencil className="size-4" />} onSelect={() => startRename(d.id, d.name)}>Rename</MenuItem>
+                  <MenuItem
+                    icon={<Pencil className="size-4" />}
+                    onSelect={() => startRename(d.id, d.name)}
+                  >
+                    Rename
+                  </MenuItem>
                   <MenuItem
                     icon={<Copy className="size-4" />}
                     onSelect={() => {
@@ -263,7 +372,9 @@ function DiagramTabs({ peers }: { peers: Peer[] }) {
                       const next = view.diagrams[idx === 0 ? 1 : idx - 1];
                       if (deleteDiagram(doc, d.id, LOCAL)) {
                         set({ diagramId: next?.id ?? null, selection: [] });
-                        toast(`Deleted “${d.name}”`, { action: { label: 'Undo', onClick: () => session.undo.undo() } });
+                        toast(`Deleted “${d.name}”`, {
+                          action: { label: 'Undo', onClick: () => session.undo.undo() },
+                        });
                       }
                     }}
                   >
@@ -324,12 +435,25 @@ function Presence({ peers }: { peers: Peer[] }) {
         const diagramName = view.snapshot.diagrams[p.diagramId ?? '']?.name;
         const following = follow === p.clientId;
         return (
-          <Tooltip key={p.user.id} content={`${p.user.name}${diagramName ? ` · ${diagramName}` : ''} — ${following ? 'click to stop following' : 'click to follow'}`}>
+          <Tooltip
+            key={p.user.id}
+            content={`${p.user.name}${diagramName ? ` · ${diagramName}` : ''} — ${following ? 'click to stop following' : 'click to follow'}`}
+          >
             <button
               aria-label={`${following ? 'Stop following' : 'Follow'} ${p.user.name}`}
-              onClick={() => set({ followClientId: following ? null : p.clientId, ...(following || !p.diagramId ? {} : { diagramId: p.diagramId }) })}
-              className={cx('rounded-full ring-2', following ? 'ring-offset-2 ring-offset-[var(--surface)]' : 'ring-[var(--surface)]')}
-              style={following ? ({ '--tw-ring-color': p.user.color } as React.CSSProperties) : undefined}
+              onClick={() =>
+                set({
+                  followClientId: following ? null : p.clientId,
+                  ...(following || !p.diagramId ? {} : { diagramId: p.diagramId }),
+                })
+              }
+              className={cx(
+                'rounded-full ring-2',
+                following ? 'ring-offset-2 ring-offset-[var(--surface)]' : 'ring-[var(--surface)]',
+              )}
+              style={
+                following ? ({ '--tw-ring-color': p.user.color } as React.CSSProperties) : undefined
+              }
             >
               <Avatar name={p.user.name} color={p.user.color} size={28} />
             </button>
@@ -337,7 +461,9 @@ function Presence({ peers }: { peers: Peer[] }) {
         );
       })}
       {users.length > 5 && (
-        <span className="flex size-7 items-center justify-center rounded-full bg-surface-2 text-xs font-medium text-muted ring-2 ring-[var(--surface)]">+{users.length - 5}</span>
+        <span className="flex size-7 items-center justify-center rounded-full bg-surface-2 text-xs font-medium text-muted ring-2 ring-[var(--surface)]">
+          +{users.length - 5}
+        </span>
       )}
     </div>
   );

@@ -26,7 +26,10 @@ export function createSession(projectId: string, me: Me): Session {
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((l) => l());
   const r = roots(doc);
-  const undo = new Y.UndoManager([r.diagrams, r.variables], { trackedOrigins: new Set([LOCAL]), captureTimeout: 0 });
+  const undo = new Y.UndoManager([r.diagrams, r.variables], {
+    trackedOrigins: new Set([LOCAL]),
+    captureTimeout: 0,
+  });
 
   const session: Session = {
     doc,
@@ -82,11 +85,14 @@ export function createSession(projectId: string, me: Me): Session {
     },
     onUnsyncedChanges: ({ number }) => {
       unsynced = number;
-      if (session.status === 'synced' || session.status === 'saving') updateStatus(number > 0 ? 'saving' : 'synced');
+      if (session.status === 'synced' || session.status === 'saving')
+        updateStatus(number > 0 ? 'saving' : 'synced');
     },
     onStatus: ({ status }) => {
-      if (status === WebSocketStatus.Disconnected && session.status !== 'denied') updateStatus('offline');
-      if (status === WebSocketStatus.Connecting && session.status === 'offline') updateStatus('connecting');
+      if (status === WebSocketStatus.Disconnected && session.status !== 'denied')
+        updateStatus('offline');
+      if (status === WebSocketStatus.Connecting && session.status === 'offline')
+        updateStatus('connecting');
     },
   });
   return session;

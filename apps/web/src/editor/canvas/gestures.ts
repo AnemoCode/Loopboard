@@ -3,7 +3,10 @@ import type { Box } from '@cld/render';
 import type { Gesture } from '../store';
 
 /** Apply an in-progress gesture to the element map, returning new objects only for affected elements. */
-export function applyGesture(elements: Record<string, DiagramElement>, g: Gesture | null): Record<string, DiagramElement> {
+export function applyGesture(
+  elements: Record<string, DiagramElement>,
+  g: Gesture | null,
+): Record<string, DiagramElement> {
   if (!g) return elements;
   if (g.kind === 'move') {
     if (!g.dx && !g.dy) return elements;
@@ -36,7 +39,8 @@ export function applyGesture(elements: Record<string, DiagramElement>, g: Gestur
   if (g.kind === 'resize') {
     const el = elements[g.id];
     if (!el || el.type === 'link') return elements;
-    if (el.type === 'loop') return { ...elements, [g.id]: { ...el, r: Math.max(10, Math.round(g.w / 2)) } };
+    if (el.type === 'loop')
+      return { ...elements, [g.id]: { ...el, r: Math.max(10, Math.round(g.w / 2)) } };
     return { ...elements, [g.id]: { ...el, x: g.x, y: g.y, w: g.w, h: g.h } };
   }
   if (g.kind === 'curve') {
@@ -84,7 +88,13 @@ export function handlePoint(box: Box, h: Handle): Point {
 }
 
 /** New center box (x/y = center) for dragging `h` of `el` to world point `p`. */
-export function resizeTo(el: DiagramElement, start: Box, h: Handle, p: Point, keepRatio: boolean): { x: number; y: number; w: number; h: number } {
+export function resizeTo(
+  el: DiagramElement,
+  start: Box,
+  h: Handle,
+  p: Point,
+  keepRatio: boolean,
+): { x: number; y: number; w: number; h: number } {
   const MIN = 24;
   if (el.type === 'loop') {
     const r = Math.max(10, Math.max(Math.abs(p.x - el.x), Math.abs(p.y - el.y)));
@@ -119,7 +129,12 @@ export function resizeTo(el: DiagramElement, start: Box, h: Handle, p: Point, ke
     y0 = start.y;
     y1 = start.y + start.h;
   }
-  return { x: Math.round((x0 + x1) / 2), y: Math.round((y0 + y1) / 2), w: Math.round(x1 - x0), h: Math.round(y1 - y0) };
+  return {
+    x: Math.round((x0 + x1) / 2),
+    y: Math.round((y0 + y1) / 2),
+    w: Math.round(x1 - x0),
+    h: Math.round(y1 - y0),
+  };
 }
 
 /** Snap a move so the dragged box's center/edges align with other elements. Returns adjusted delta + guides. */
@@ -140,9 +155,11 @@ export function snapMove(
     for (let i = 0; i < 3; i++) {
       // Only compare like with like (centers with centers, edges with edges) to avoid noisy guides.
       const d = ox[i]! - mx[i]!;
-      if (Math.abs(d) <= threshold && (!bestX || Math.abs(d) < Math.abs(bestX.d))) bestX = { d, at: ox[i]! };
+      if (Math.abs(d) <= threshold && (!bestX || Math.abs(d) < Math.abs(bestX.d)))
+        bestX = { d, at: ox[i]! };
       const e = oy[i]! - my[i]!;
-      if (Math.abs(e) <= threshold && (!bestY || Math.abs(e) < Math.abs(bestY.d))) bestY = { d: e, at: oy[i]! };
+      if (Math.abs(e) <= threshold && (!bestY || Math.abs(e) < Math.abs(bestY.d)))
+        bestY = { d: e, at: oy[i]! };
     }
   }
   if (!bestX && !bestY) return { dx, dy, guides: null };
@@ -153,6 +170,10 @@ export function snapMove(
   };
 }
 
-export const boxesIntersect = (a: Box, b: Box) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+export const boxesIntersect = (a: Box, b: Box) =>
+  a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 export const boxContains = (outer: Box, inner: Box) =>
-  inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
+  inner.x >= outer.x &&
+  inner.y >= outer.y &&
+  inner.x + inner.w <= outer.x + outer.w &&
+  inner.y + inner.h <= outer.y + outer.h;

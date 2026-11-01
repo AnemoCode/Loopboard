@@ -1,7 +1,27 @@
-import { ArrowUpRight, Circle, Diamond, Hand, MessageCircle, MousePointer2, RectangleHorizontal, RefreshCw, Square, Type, Variable } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Circle,
+  Diamond,
+  Hand,
+  MessageCircle,
+  MousePointer2,
+  RectangleHorizontal,
+  RefreshCw,
+  Square,
+  Type,
+  Variable,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { ShapeKind } from '@cld/model';
-import { cx, IconButton, Menu, MenuContent, MenuItem, MenuTrigger, Tooltip } from '../components/ui';
+import {
+  cx,
+  IconButton,
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuTrigger,
+  Tooltip,
+} from '../components/ui';
 import { useEditorCtx } from './context';
 import { useEditor, type Tool } from './store';
 
@@ -20,7 +40,14 @@ export function Toolbar() {
   const pick = (t: Tool) => set({ tool: t, editing: null });
   const btn = (t: Tool, label: string, key: string, icon: ReactNode, enabled = true) =>
     enabled && (
-      <IconButton key={t} label={label} shortcut={key} side="right" active={tool === t} onClick={() => pick(t)}>
+      <IconButton
+        key={t}
+        label={label}
+        shortcut={key}
+        side="right"
+        active={tool === t}
+        onClick={() => pick(t)}
+      >
         {icon}
       </IconButton>
     );
@@ -53,7 +80,9 @@ export function Toolbar() {
                 }}
                 className={cx(
                   'relative inline-flex size-9 items-center justify-center rounded-lg transition-colors',
-                  tool === 'shape' ? 'bg-accent-100 text-accent-700 dark:bg-accent-500/20 dark:text-accent-300' : 'text-app hover:bg-surface-2',
+                  tool === 'shape'
+                    ? 'bg-accent-100 text-accent-700 dark:bg-accent-500/20 dark:text-accent-300'
+                    : 'text-app hover:bg-surface-2',
                 )}
               >
                 {shape.icon}
@@ -63,7 +92,12 @@ export function Toolbar() {
           </Tooltip>
           <MenuContent side="right" align="start">
             {SHAPES.map((s) => (
-              <MenuItem key={s.kind} icon={s.icon} checked={false} onSelect={() => set({ shapeKind: s.kind, tool: 'shape' })}>
+              <MenuItem
+                key={s.kind}
+                icon={s.icon}
+                checked={false}
+                onSelect={() => set({ shapeKind: s.kind, tool: 'shape' })}
+              >
                 {s.label}
               </MenuItem>
             ))}

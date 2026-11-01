@@ -52,20 +52,32 @@ export function deleteSelection(ctx: EditorCtx) {
   if (!ids.length) return;
   const n = deleteElements(ctx.session.doc, current(ctx).diagramId, ids, LOCAL);
   useEditor.getState().select([]);
-  if (n > ids.length) toast(`Deleted ${n} elements (including attached links)`, { action: { label: 'Undo', onClick: () => ctx.session.undo.undo() } });
+  if (n > ids.length)
+    toast(`Deleted ${n} elements (including attached links)`, {
+      action: { label: 'Undo', onClick: () => ctx.session.undo.undo() },
+    });
 }
 
 export function nudge(ctx: EditorCtx, dx: number, dy: number) {
   const ids = editable(ctx, editor().selection);
-  if (ids.length) moveElements(ctx.session.doc, current(ctx).diagramId, ids.map((id) => ({ id, dx, dy })), LOCAL);
+  if (ids.length)
+    moveElements(
+      ctx.session.doc,
+      current(ctx).diagramId,
+      ids.map((id) => ({ id, dx, dy })),
+      LOCAL,
+    );
 }
 
 export function setPolarity(ctx: EditorCtx, polarity: Polarity | 'cycle') {
-  const links = selectedElements(ctx).filter((e): e is Link => e.type === 'link' && editable(ctx, [e.id]).length > 0);
+  const links = selectedElements(ctx).filter(
+    (e): e is Link => e.type === 'link' && editable(ctx, [e.id]).length > 0,
+  );
   if (!links.length) return false;
   const order: Polarity[] = ['+', '-', '?', null];
   for (const l of links) {
-    const next = polarity === 'cycle' ? order[(order.indexOf(l.polarity) + 1) % order.length]! : polarity;
+    const next =
+      polarity === 'cycle' ? order[(order.indexOf(l.polarity) + 1) % order.length]! : polarity;
     updateElement(ctx.session.doc, current(ctx).diagramId, l.id, { polarity: next }, LOCAL);
   }
   return true;
@@ -75,7 +87,11 @@ export function toggleDelay(ctx: EditorCtx) {
   const links = selectedElements(ctx).filter((e): e is Link => e.type === 'link');
   if (!links.length) return;
   const on = !links.every((l) => l.delay);
-  for (const l of editable(ctx, links.map((x) => x.id))) updateElement(ctx.session.doc, current(ctx).diagramId, l, { delay: on || undefined }, LOCAL);
+  for (const l of editable(
+    ctx,
+    links.map((x) => x.id),
+  ))
+    updateElement(ctx.session.doc, current(ctx).diagramId, l, { delay: on || undefined }, LOCAL);
 }
 
 export function applyStyle(ctx: EditorCtx, ids: string[], patch: Style) {
@@ -84,7 +100,8 @@ export function applyStyle(ctx: EditorCtx, ids: string[], patch: Style) {
 }
 
 export function patchElements(ctx: EditorCtx, ids: string[], patch: Record<string, unknown>) {
-  for (const id of editable(ctx, ids)) updateElement(ctx.session.doc, current(ctx).diagramId, id, patch, LOCAL);
+  for (const id of editable(ctx, ids))
+    updateElement(ctx.session.doc, current(ctx).diagramId, id, patch, LOCAL);
 }
 
 export function reorder(ctx: EditorCtx, op: ZOrderOp) {
@@ -119,7 +136,15 @@ export function pastePayload(ctx: EditorCtx, text: string): boolean {
   if (!layerId) return false;
   pasteCount++;
   const offset = 24 * pasteCount;
-  const ids = pasteElements(ctx.session.doc, current(ctx).diagramId, data.items, layerId, offset, offset, LOCAL);
+  const ids = pasteElements(
+    ctx.session.doc,
+    current(ctx).diagramId,
+    data.items,
+    layerId,
+    offset,
+    offset,
+    LOCAL,
+  );
   useEditor.getState().select(ids);
   return true;
 }
@@ -132,18 +157,32 @@ export function duplicateSelection(ctx: EditorCtx) {
 // ---------------------------------------------------------------- loops
 
 /** Place a loop marker for a detected loop (auto-numbered R1, B2, …). */
-export function placeLoopMarker(ctx: EditorCtx, loop: ReturnType<typeof findLoops>['loops'][number]) {
+export function placeLoopMarker(
+  ctx: EditorCtx,
+  loop: ReturnType<typeof findLoops>['loops'][number],
+) {
   const { diagram, diagramId } = current(ctx);
   const { layerId } = editor();
   if (!diagram || !layerId || !ctx.canEdit) return;
   const kind = loop.kind === '?' ? 'custom' : loop.kind;
   const prefix = kind === 'custom' ? 'L' : kind;
-  const used = Object.values(diagram.elements).filter((e) => e.type === 'loop' && e.label.startsWith(prefix)).length;
+  const used = Object.values(diagram.elements).filter(
+    (e) => e.type === 'loop' && e.label.startsWith(prefix),
+  ).length;
   const at = freeSpotNear(diagram, loop.center);
   const id = addElement(
     ctx.session.doc,
     diagramId,
-    { type: 'loop', layerId, x: at.x, y: at.y, r: 26, kind, label: `${prefix}${used + 1}`, direction: loop.direction },
+    {
+      type: 'loop',
+      layerId,
+      x: at.x,
+      y: at.y,
+      r: 26,
+      kind,
+      label: `${prefix}${used + 1}`,
+      direction: loop.direction,
+    },
     LOCAL,
   );
   useEditor.getState().select([id]);
@@ -151,13 +190,19 @@ export function placeLoopMarker(ctx: EditorCtx, loop: ReturnType<typeof findLoop
 
 export function nextLoopLabel(ctx: EditorCtx, kind: 'R' | 'B'): string {
   const { diagram } = current(ctx);
-  const used = Object.values(diagram?.elements ?? {}).filter((e) => e.type === 'loop' && e.label.startsWith(kind)).length;
+  const used = Object.values(diagram?.elements ?? {}).filter(
+    (e) => e.type === 'loop' && e.label.startsWith(kind),
+  ).length;
   return `${kind}${used + 1}`;
 }
 
 // ---------------------------------------------------------------- viewport
 
-export function zoomTo(viewport: Viewport, zoom: number, center: { x: number; y: number }): Viewport {
+export function zoomTo(
+  viewport: Viewport,
+  zoom: number,
+  center: { x: number; y: number },
+): Viewport {
   const z = Math.min(4, Math.max(0.1, zoom));
   const wx = (center.x - viewport.x) / viewport.zoom;
   const wy = (center.y - viewport.y) / viewport.zoom;
@@ -167,8 +212,18 @@ export function zoomTo(viewport: Viewport, zoom: number, center: { x: number; y:
 export function fitBox(box: Box | null, width: number, height: number, maxZoom = 1.5): Viewport {
   if (!box || width <= 0 || height <= 0) return { x: width / 2, y: height / 2, zoom: 1 };
   const pad = 64;
-  const zoom = Math.min(maxZoom, Math.max(0.1, Math.min((width - pad * 2) / Math.max(box.w, 1), (height - pad * 2) / Math.max(box.h, 1))));
-  return { zoom, x: width / 2 - (box.x + box.w / 2) * zoom, y: height / 2 - (box.y + box.h / 2) * zoom };
+  const zoom = Math.min(
+    maxZoom,
+    Math.max(
+      0.1,
+      Math.min((width - pad * 2) / Math.max(box.w, 1), (height - pad * 2) / Math.max(box.h, 1)),
+    ),
+  );
+  return {
+    zoom,
+    x: width / 2 - (box.x + box.w / 2) * zoom,
+    y: height / 2 - (box.y + box.h / 2) * zoom,
+  };
 }
 
 export function selectionBox(layout: DiagramLayout, ids: string[]): Box | null {

@@ -1,6 +1,13 @@
 import { useSyncExternalStore } from 'react';
 import type * as Y from 'yjs';
-import { byKey, toSnapshot, type CommentThread, type Diagram, type ProjectSnapshot, type Variable } from '@cld/model';
+import {
+  byKey,
+  toSnapshot,
+  type CommentThread,
+  type Diagram,
+  type ProjectSnapshot,
+  type Variable,
+} from '@cld/model';
 
 export interface DocView {
   snapshot: ProjectSnapshot;
@@ -44,13 +51,17 @@ export class DocStore {
   private compute(prev: DocView | null): DocView {
     const snap = toSnapshot(this.doc);
     if (prev) {
-      for (const [id, v] of Object.entries(snap.variables)) snap.variables[id] = this.share(v, prev.snapshot.variables[id]);
+      for (const [id, v] of Object.entries(snap.variables))
+        snap.variables[id] = this.share(v, prev.snapshot.variables[id]);
       for (const [id, d] of Object.entries(snap.diagrams)) {
         const pd = prev.snapshot.diagrams[id];
-        for (const [eid, el] of Object.entries(d.elements)) d.elements[eid] = this.share(el, pd?.elements[eid]);
-        for (const [lid, l] of Object.entries(d.layers)) d.layers[lid] = this.share(l, pd?.layers[lid]);
+        for (const [eid, el] of Object.entries(d.elements))
+          d.elements[eid] = this.share(el, pd?.elements[eid]);
+        for (const [lid, l] of Object.entries(d.layers))
+          d.layers[lid] = this.share(l, pd?.layers[lid]);
       }
-      for (const [id, t] of Object.entries(snap.comments)) snap.comments[id] = this.share(t, prev.snapshot.comments[id]);
+      for (const [id, t] of Object.entries(snap.comments))
+        snap.comments[id] = this.share(t, prev.snapshot.comments[id]);
     }
     return {
       snapshot: snap,

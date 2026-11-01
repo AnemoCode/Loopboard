@@ -9,15 +9,30 @@ export function ZoomControls({ onFit }: { onFit: () => void }) {
   const zoomBy = (f: number) => {
     const el = document.querySelector('[data-testid="canvas"]');
     const r = el?.getBoundingClientRect();
-    set({ viewport: zoomTo(viewport, viewport.zoom * f, { x: (r?.width ?? 0) / 2, y: (r?.height ?? 0) / 2 }), followClientId: null });
+    set({
+      viewport: zoomTo(viewport, viewport.zoom * f, {
+        x: (r?.width ?? 0) / 2,
+        y: (r?.height ?? 0) / 2,
+      }),
+      followClientId: null,
+    });
   };
   return (
     <div className="pointer-events-auto flex items-center gap-0.5 rounded-xl border border-app bg-surface p-1 shadow-lg">
-      <IconButton size="sm" label="Zoom out" shortcut="⌘−" side="top" onClick={() => zoomBy(1 / 1.25)}>
+      <IconButton
+        size="sm"
+        label="Zoom out"
+        shortcut="⌘−"
+        side="top"
+        onClick={() => zoomBy(1 / 1.25)}
+      >
         <Minus className="size-4" />
       </IconButton>
       <Tooltip content="Reset to 100%" side="top">
-        <button className="w-12 rounded-md py-1 text-xs font-medium tabular-nums text-app hover:bg-surface-2" onClick={() => zoomBy(1 / viewport.zoom)}>
+        <button
+          className="w-12 rounded-md py-1 text-xs font-medium tabular-nums text-app hover:bg-surface-2"
+          onClick={() => zoomBy(1 / viewport.zoom)}
+        >
           {Math.round(viewport.zoom * 100)}%
         </button>
       </Tooltip>

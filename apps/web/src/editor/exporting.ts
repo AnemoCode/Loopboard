@@ -19,7 +19,12 @@ function svgOptions(o: ExportOptions, extra: Partial<SvgOptions> = {}): SvgOptio
   return {
     theme,
     includeHidden: o.includeHidden,
-    background: o.background === 'transparent' ? null : o.background === 'white' && !o.dark ? '#ffffff' : theme.background,
+    background:
+      o.background === 'transparent'
+        ? null
+        : o.background === 'white' && !o.dark
+          ? '#ffffff'
+          : theme.background,
     ...extra,
   };
 }
@@ -37,7 +42,12 @@ async function svgToPng(svg: string, width: number, height: number, scale: numbe
     const c = canvas.getContext('2d')!;
     c.scale(scale, scale);
     c.drawImage(img, 0, 0, width, height);
-    return await new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encoding failed'))), 'image/png'));
+    return await new Promise((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('PNG encoding failed'))),
+        'image/png',
+      ),
+    );
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -48,17 +58,34 @@ export function mdlPreflight(snap: ProjectSnapshot): string[] {
 }
 
 /** Run an export and trigger the browser download. */
-export async function runExport(snap: ProjectSnapshot, projectName: string, diagramId: string, selection: string[], o: ExportOptions): Promise<void> {
+export async function runExport(
+  snap: ProjectSnapshot,
+  projectName: string,
+  diagramId: string,
+  selection: string[],
+  o: ExportOptions,
+): Promise<void> {
   const base = safeFilename(projectName);
   const diagrams = Object.values(snap.diagrams).sort(byKey((d) => d.order));
   const current = snap.diagrams[diagramId]!;
-  const name = (d: { name: string }) => (diagrams.length > 1 ? `${base} - ${safeFilename(d.name)}` : base);
+  const name = (d: { name: string }) =>
+    diagrams.length > 1 ? `${base} - ${safeFilename(d.name)}` : base;
   const only = o.scope === 'selection' && selection.length ? new Set(selection) : undefined;
 
   switch (o.format) {
     case 'json': {
-      const data = { format: 'cld', version: 1, exportedAt: new Date().toISOString(), app: { name: 'loopwise' }, project: { name: projectName }, doc: snap };
-      downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `${base}.cld.json`);
+      const data = {
+        format: 'cld',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        app: { name: 'loopwise' },
+        project: { name: projectName },
+        doc: snap,
+      };
+      downloadBlob(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+        `${base}.cld.json`,
+      );
       return;
     }
     case 'mdl': {
@@ -87,11 +114,17 @@ export async function runExport(snap: ProjectSnapshot, projectName: string, diag
       const targets = o.scope === 'all' ? diagrams : [current];
       let pdf: InstanceType<typeof jsPDF> | null = null;
       for (const d of targets) {
-        const { svg, width, height } = renderDiagramSvg(snap, d.id, svgOptions(o, { only, fontMode: 'pdf' }));
+        const { svg, width, height } = renderDiagramSvg(
+          snap,
+          d.id,
+          svgOptions(o, { only, fontMode: 'pdf' }),
+        );
         const orientation = width >= height ? 'landscape' : 'portrait';
-        if (!pdf) pdf = new jsPDF({ unit: 'pt', format: [width, height], orientation, compress: true });
+        if (!pdf)
+          pdf = new jsPDF({ unit: 'pt', format: [width, height], orientation, compress: true });
         else pdf.addPage([width, height], orientation);
-        const el = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement as unknown as SVGElement;
+        const el = new DOMParser().parseFromString(svg, 'image/svg+xml')
+          .documentElement as unknown as SVGElement;
         // svg2pdf needs the element in the DOM to resolve styles.
         const host = document.createElement('div');
         host.style.cssText = 'position:fixed;left:-99999px;top:0';

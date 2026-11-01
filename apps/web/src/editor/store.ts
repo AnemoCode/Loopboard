@@ -15,7 +15,14 @@ export type Gesture =
   | { kind: 'move'; ids: string[]; dx: number; dy: number }
   | { kind: 'resize'; id: string; x: number; y: number; w: number; h: number }
   | { kind: 'curve'; id: string; control: Point | null }
-  | { kind: 'link'; from: string; point: Point; target: string | null; linkId?: string; end?: 'from' | 'to' }
+  | {
+      kind: 'link';
+      from: string;
+      point: Point;
+      target: string | null;
+      linkId?: string;
+      end?: 'from' | 'to';
+    }
   | { kind: 'marquee'; x0: number; y0: number; x1: number; y1: number }
   | { kind: 'draw'; shape: ShapeKind; x0: number; y0: number; x1: number; y1: number };
 

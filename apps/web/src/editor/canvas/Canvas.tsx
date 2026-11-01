@@ -1,6 +1,27 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
-import { addElement, moveElements, updateElement, type DiagramElement, type Point } from '@cld/model';
-import { darkTheme, layoutDiagram, LayoutCache, lightTheme, type Box, type DiagramLayout } from '@cld/render';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as RPointerEvent,
+} from 'react';
+import {
+  addElement,
+  moveElements,
+  updateElement,
+  type DiagramElement,
+  type Point,
+} from '@cld/model';
+import {
+  darkTheme,
+  layoutDiagram,
+  LayoutCache,
+  lightTheme,
+  type Box,
+  type DiagramLayout,
+} from '@cld/render';
 import { useIsDark } from '../../lib/theme';
 import { editable, fitBox, nextLoopLabel, zoomTo } from '../actions';
 import { useEditorCtx } from '../context';
@@ -10,14 +31,32 @@ import { LOCAL } from '../session';
 import { editor, useEditor } from '../store';
 import { useShortcuts } from '../useShortcuts';
 import { CanvasOverlay } from './CanvasOverlay';
-import { applyGesture, boxContains, boxesIntersect, handlePoint, handlesFor, resizeBox, resizeTo, snapMove, type Handle } from './gestures';
+import {
+  applyGesture,
+  boxContains,
+  boxesIntersect,
+  handlePoint,
+  handlesFor,
+  resizeBox,
+  resizeTo,
+  snapMove,
+  type Handle,
+} from './gestures';
 import { ElementView } from './PrimView';
 
 const DRAG_THRESHOLD = 3;
 
 type Pending =
   | { kind: 'pan'; sx: number; sy: number; vx: number; vy: number }
-  | { kind: 'press'; id: string; start: Point; sx: number; sy: number; wasSelected: boolean; shift: boolean }
+  | {
+      kind: 'press';
+      id: string;
+      start: Point;
+      sx: number;
+      sy: number;
+      wasSelected: boolean;
+      shift: boolean;
+    }
   | { kind: 'move'; ids: string[]; start: Point; box: Box | null; others: Box[] }
   | { kind: 'resize'; id: string; handle: Handle; box: Box }
   | { kind: 'curve'; id: string }
@@ -44,14 +83,20 @@ export function Canvas({ peers }: { peers: Peer[] }) {
   const publish = useMemo(() => createPresencePublisher(session), [session]);
 
   // ---- derived scene: document + local gesture + collaborators' live gestures
-  const localPeers = useMemo(() => peers.filter((p) => p.diagramId === diagramId), [peers, diagramId]);
+  const localPeers = useMemo(
+    () => peers.filter((p) => p.diagramId === diagramId),
+    [peers, diagramId],
+  );
   const elements = useMemo(() => {
     let els = diagram?.elements ?? {};
     for (const p of localPeers) els = applyGesture(els, p.gesture);
     return applyGesture(els, gesture);
   }, [diagram, localPeers, gesture]);
   const layers = useMemo(() => diagram?.layers ?? {}, [diagram]);
-  const variableName = useCallback((id: string) => view.variables[id]?.name ?? '', [view.variables]);
+  const variableName = useCallback(
+    (id: string) => view.variables[id]?.name ?? '',
+    [view.variables],
+  );
   const layout: DiagramLayout = useMemo(
     () => layoutDiagram({ elements, layers, variableName }, theme, cache.current),
     [elements, layers, variableName, theme],
@@ -79,7 +124,11 @@ export function Canvas({ peers }: { peers: Peer[] }) {
   }, [diagramId, size.w, size.h, set]);
   const fitNonce = useEditor((s) => s.fitNonce);
   useEffect(() => {
-    if (fitNonce) set({ viewport: fitBox(layoutRef.current.bbox, sizeRef.current.w, sizeRef.current.h, 1.5), followClientId: null });
+    if (fitNonce)
+      set({
+        viewport: fitBox(layoutRef.current.bbox, sizeRef.current.w, sizeRef.current.h, 1.5),
+        followClientId: null,
+      });
   }, [fitNonce, set]);
 
   // ---- keyboard shortcuts + clipboard
@@ -89,27 +138,46 @@ export function Canvas({ peers }: { peers: Peer[] }) {
 
   // ---- follow mode: keep the followed collaborator's view centred
   const followClientId = useEditor((s) => s.followClientId);
-  const followed = followClientId !== null ? peers.find((p) => p.clientId === followClientId) : undefined;
+  const followed =
+    followClientId !== null ? peers.find((p) => p.clientId === followClientId) : undefined;
   useEffect(() => {
     if (followClientId === null) return;
     if (!followed) {
       set({ followClientId: null });
       return;
     }
-    if (followed.diagramId && followed.diagramId !== editor().diagramId) set({ diagramId: followed.diagramId, selection: [] });
+    if (followed.diagramId && followed.diagramId !== editor().diagramId)
+      set({ diagramId: followed.diagramId, selection: [] });
     const v = followed.viewport;
     if (v && size.w) set({ viewport: fitBox(v, size.w, size.h, 4) });
   }, [followClientId, followed, size.w, size.h, set]);
 
   // ---- presence publishing
   useEffect(() => publish({ selection }), [selection, publish]);
-  useEffect(() => publish({ gesture: gesture && (gesture.kind === 'marquee' || gesture.kind === 'draw') ? null : gesture }), [gesture, publish]);
+  useEffect(
+    () =>
+      publish({
+        gesture:
+          gesture && (gesture.kind === 'marquee' || gesture.kind === 'draw') ? null : gesture,
+      }),
+    [gesture, publish],
+  );
   useEffect(() => publish({ diagramId, cursor: null }, true), [diagramId, publish]);
   useEffect(() => {
     if (!size.w) return;
-    publish({ viewport: { x: -viewport.x / viewport.zoom, y: -viewport.y / viewport.zoom, w: size.w / viewport.zoom, h: size.h / viewport.zoom } });
+    publish({
+      viewport: {
+        x: -viewport.x / viewport.zoom,
+        y: -viewport.y / viewport.zoom,
+        w: size.w / viewport.zoom,
+        h: size.h / viewport.zoom,
+      },
+    });
   }, [viewport, size, publish]);
-  useEffect(() => publish({ editing: editing?.kind === 'element' ? editing.id : null }), [editing, publish]);
+  useEffect(
+    () => publish({ editing: editing?.kind === 'element' ? editing.id : null }),
+    [editing, publish],
+  );
 
   const toWorld = useCallback((clientX: number, clientY: number): Point => {
     const r = containerRef.current!.getBoundingClientRect();
@@ -125,8 +193,13 @@ export function Canvas({ peers }: { peers: Peer[] }) {
       const v = editor().viewport;
       const r = el.getBoundingClientRect();
       if (e.ctrlKey || e.metaKey) {
-        const factor = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025) * (e.ctrlKey && !e.metaKey ? 2.5 : 1));
-        set({ viewport: zoomTo(v, v.zoom * factor, { x: e.clientX - r.left, y: e.clientY - r.top }), followClientId: null });
+        const factor = Math.exp(
+          -e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0025) * (e.ctrlKey && !e.metaKey ? 2.5 : 1),
+        );
+        set({
+          viewport: zoomTo(v, v.zoom * factor, { x: e.clientX - r.left, y: e.clientY - r.top }),
+          followClientId: null,
+        });
       } else {
         const k = e.deltaMode === 1 ? 16 : 1;
         const dx = (e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX) * k;
@@ -140,7 +213,8 @@ export function Canvas({ peers }: { peers: Peer[] }) {
 
   // ---- space-to-pan
   useEffect(() => {
-    const typing = (e: KeyboardEvent) => (e.target as HTMLElement).closest('input, textarea, [contenteditable="true"]');
+    const typing = (e: KeyboardEvent) =>
+      (e.target as HTMLElement).closest('input, textarea, [contenteditable="true"]');
     const down = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !typing(e)) {
         space.current = true;
@@ -163,7 +237,10 @@ export function Canvas({ peers }: { peers: Peer[] }) {
   }, []);
 
   const variableAt = (clientX: number, clientY: number): string | null => {
-    const hit = document.elementFromPoint(clientX, clientY)?.closest('[data-id]')?.getAttribute('data-id');
+    const hit = document
+      .elementFromPoint(clientX, clientY)
+      ?.closest('[data-id]')
+      ?.getAttribute('data-id');
     return hit && elementsRef.current[hit]?.type === 'variable' ? hit : null;
   };
 
@@ -180,7 +257,13 @@ export function Canvas({ peers }: { peers: Peer[] }) {
     svgRef.current?.setPointerCapture(e.pointerId);
 
     if (e.button === 1 || space.current || st.tool === 'hand') {
-      pending.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: st.viewport.x, vy: st.viewport.y };
+      pending.current = {
+        kind: 'pan',
+        sx: e.clientX,
+        sy: e.clientY,
+        vx: st.viewport.x,
+        vy: st.viewport.y,
+      };
       set({ followClientId: null });
       return;
     }
@@ -205,7 +288,16 @@ export function Canvas({ peers }: { peers: Peer[] }) {
         const newId = addElement(
           session.doc,
           st.diagramId!,
-          { type: 'loop', layerId: st.layerId, x: Math.round(world.x), y: Math.round(world.y), r: 26, kind: 'R', label: nextLoopLabel(ctx, 'R'), direction: 'cw' },
+          {
+            type: 'loop',
+            layerId: st.layerId,
+            x: Math.round(world.x),
+            y: Math.round(world.y),
+            r: 26,
+            kind: 'R',
+            label: nextLoopLabel(ctx, 'R'),
+            direction: 'cw',
+          },
           LOCAL,
         );
         set({ selection: [newId], panelTab: 'design', panelOpen: true });
@@ -215,13 +307,24 @@ export function Canvas({ peers }: { peers: Peer[] }) {
       case 'shape':
         if (!canEdit) return;
         pending.current = { kind: 'draw', start: world };
-        set({ gesture: { kind: 'draw', shape: st.shapeKind, x0: world.x, y0: world.y, x1: world.x, y1: world.y } });
+        set({
+          gesture: {
+            kind: 'draw',
+            shape: st.shapeKind,
+            x0: world.x,
+            y0: world.y,
+            x1: world.x,
+            y1: world.y,
+          },
+        });
         return;
       case 'comment': {
         if (!ctx.canComment) return;
         const anchor = el && el.type !== 'link' ? el : null;
         set({
-          draftComment: anchor ? { elementId: anchor.id, x: world.x - anchor.x, y: world.y - anchor.y } : { x: world.x, y: world.y },
+          draftComment: anchor
+            ? { elementId: anchor.id, x: world.x - anchor.x, y: world.y - anchor.y }
+            : { x: world.x, y: world.y },
           openThread: null,
         });
         finishTool();
@@ -247,7 +350,16 @@ export function Canvas({ peers }: { peers: Peer[] }) {
         } else if ((handle === 'from' || handle === 'to') && sel.type === 'link') {
           const fixed = handle === 'from' ? sel.to : sel.from;
           pending.current = { kind: 'link', from: fixed, linkId: selId, end: handle };
-          set({ gesture: { kind: 'link', from: fixed, point: world, target: null, linkId: selId, end: handle } });
+          set({
+            gesture: {
+              kind: 'link',
+              from: fixed,
+              point: world,
+              target: null,
+              linkId: selId,
+              end: handle,
+            },
+          });
         } else {
           const box = resizeBox(sel, lay.bbox);
           pending.current = { kind: 'resize', id: selId, handle: handle as Handle, box };
@@ -262,13 +374,29 @@ export function Canvas({ peers }: { peers: Peer[] }) {
     }
     if (id && el) {
       const wasSelected = st.selection.includes(id);
-      if (e.shiftKey || e.metaKey) set({ selection: wasSelected ? st.selection.filter((s) => s !== id) : [...st.selection, id] });
+      if (e.shiftKey || e.metaKey)
+        set({
+          selection: wasSelected ? st.selection.filter((s) => s !== id) : [...st.selection, id],
+        });
       else if (!wasSelected) set({ selection: [id] });
-      pending.current = { kind: 'press', id, start: world, sx: e.clientX, sy: e.clientY, wasSelected, shift: e.shiftKey || e.metaKey };
+      pending.current = {
+        kind: 'press',
+        id,
+        start: world,
+        sx: e.clientX,
+        sy: e.clientY,
+        wasSelected,
+        shift: e.shiftKey || e.metaKey,
+      };
       return;
     }
     // Empty canvas: marquee selection.
-    pending.current = { kind: 'marquee', start: world, base: e.shiftKey ? st.selection : [], contain: e.altKey };
+    pending.current = {
+      kind: 'marquee',
+      start: world,
+      base: e.shiftKey ? st.selection : [],
+      contain: e.altKey,
+    };
     if (!e.shiftKey) set({ selection: [], openThread: null });
     set({ gesture: { kind: 'marquee', x0: world.x, y0: world.y, x1: world.x, y1: world.y } });
   };
@@ -281,11 +409,15 @@ export function Canvas({ peers }: { peers: Peer[] }) {
     const st = editor();
     switch (p.kind) {
       case 'pan':
-        set({ viewport: { ...st.viewport, x: p.vx + e.clientX - p.sx, y: p.vy + e.clientY - p.sy } });
+        set({
+          viewport: { ...st.viewport, x: p.vx + e.clientX - p.sx, y: p.vy + e.clientY - p.sy },
+        });
         return;
       case 'press': {
         if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < DRAG_THRESHOLD) return;
-        const ids = editable(ctx, st.selection.includes(p.id) ? st.selection : [p.id]).filter((i) => elementsRef.current[i]?.type !== 'link');
+        const ids = editable(ctx, st.selection.includes(p.id) ? st.selection : [p.id]).filter(
+          (i) => elementsRef.current[i]?.type !== 'link',
+        );
         if (!ids.length) {
           pending.current = null;
           return;
@@ -295,7 +427,9 @@ export function Canvas({ peers }: { peers: Peer[] }) {
         const box = movingBoxes.length === 1 ? movingBoxes[0]! : null;
         const moving = new Set(ids);
         const others = box
-          ? lay.order.filter((i) => !moving.has(i) && elementsRef.current[i]?.type !== 'link').map((i) => lay.byId.get(i)!.bbox)
+          ? lay.order
+              .filter((i) => !moving.has(i) && elementsRef.current[i]?.type !== 'link')
+              .map((i) => lay.byId.get(i)!.bbox)
           : [];
         pending.current = { kind: 'move', ids, start: p.start, box, others };
         return onPointerMove(e);
@@ -304,14 +438,24 @@ export function Canvas({ peers }: { peers: Peer[] }) {
         let dx = world.x - p.start.x;
         let dy = world.y - p.start.y;
         let g: { x?: number; y?: number } | null = null;
-        if (p.box && !e.altKey) ({ dx, dy, guides: g } = snapMove(p.box, p.others, dx, dy, 6 / st.viewport.zoom));
-        set({ gesture: { kind: 'move', ids: p.ids, dx: Math.round(dx), dy: Math.round(dy) }, guides: g });
+        if (p.box && !e.altKey)
+          ({ dx, dy, guides: g } = snapMove(p.box, p.others, dx, dy, 6 / st.viewport.zoom));
+        set({
+          gesture: { kind: 'move', ids: p.ids, dx: Math.round(dx), dy: Math.round(dy) },
+          guides: g,
+        });
         return;
       }
       case 'resize': {
         const el = diagram?.elements[p.id];
         if (!el) return;
-        set({ gesture: { kind: 'resize', id: p.id, ...resizeTo(el, p.box, p.handle, world, e.shiftKey) } });
+        set({
+          gesture: {
+            kind: 'resize',
+            id: p.id,
+            ...resizeTo(el, p.box, p.handle, world, e.shiftKey),
+          },
+        });
         return;
       }
       case 'curve': {
@@ -333,12 +477,32 @@ export function Canvas({ peers }: { peers: Peer[] }) {
       }
       case 'link': {
         const target = variableAt(e.clientX, e.clientY);
-        set({ gesture: { kind: 'link', from: p.from, point: world, target, linkId: p.linkId, end: p.end } });
+        set({
+          gesture: {
+            kind: 'link',
+            from: p.from,
+            point: world,
+            target,
+            linkId: p.linkId,
+            end: p.end,
+          },
+        });
         return;
       }
       case 'marquee': {
-        const g = { kind: 'marquee' as const, x0: p.start.x, y0: p.start.y, x1: world.x, y1: world.y };
-        const box = { x: Math.min(g.x0, g.x1), y: Math.min(g.y0, g.y1), w: Math.abs(g.x1 - g.x0), h: Math.abs(g.y1 - g.y0) };
+        const g = {
+          kind: 'marquee' as const,
+          x0: p.start.x,
+          y0: p.start.y,
+          x1: world.x,
+          y1: world.y,
+        };
+        const box = {
+          x: Math.min(g.x0, g.x1),
+          y: Math.min(g.y0, g.y1),
+          w: Math.abs(g.x1 - g.x0),
+          h: Math.abs(g.y1 - g.y0),
+        };
         const lay = layoutRef.current;
         const hit = lay.order.filter((i) => {
           const b = lay.byId.get(i)!.bbox;
@@ -348,7 +512,16 @@ export function Canvas({ peers }: { peers: Peer[] }) {
         return;
       }
       case 'draw':
-        set({ gesture: { kind: 'draw', shape: st.shapeKind, x0: p.start.x, y0: p.start.y, x1: world.x, y1: world.y } });
+        set({
+          gesture: {
+            kind: 'draw',
+            shape: st.shapeKind,
+            x0: p.start.x,
+            y0: p.start.y,
+            x1: world.x,
+            y1: world.y,
+          },
+        });
         return;
     }
   };
@@ -361,24 +534,50 @@ export function Canvas({ peers }: { peers: Peer[] }) {
     const g = st.gesture;
     const doc = session.doc;
     const dId = st.diagramId!;
-    if (p?.kind === 'press' && p.wasSelected && !p.shift && st.selection.length > 1) set({ selection: [p.id] });
+    if (p?.kind === 'press' && p.wasSelected && !p.shift && st.selection.length > 1)
+      set({ selection: [p.id] });
     if (p?.kind === 'move' && g?.kind === 'move' && (g.dx || g.dy)) {
-      moveElements(doc, dId, g.ids.map((id) => ({ id, dx: g.dx, dy: g.dy })), LOCAL);
+      moveElements(
+        doc,
+        dId,
+        g.ids.map((id) => ({ id, dx: g.dx, dy: g.dy })),
+        LOCAL,
+      );
     }
     if (p?.kind === 'resize' && g?.kind === 'resize') {
       const el = diagram?.elements[g.id];
       if (el?.type === 'loop') updateElement(doc, dId, g.id, { r: Math.round(g.w / 2) }, LOCAL);
       else updateElement(doc, dId, g.id, { x: g.x, y: g.y, w: g.w, h: g.h }, LOCAL);
     }
-    if (p?.kind === 'curve' && g?.kind === 'curve') updateElement(doc, dId, g.id, { control: g.control }, LOCAL);
+    if (p?.kind === 'curve' && g?.kind === 'curve')
+      updateElement(doc, dId, g.id, { control: g.control }, LOCAL);
     if (p?.kind === 'link' && g?.kind === 'link') {
       if (p.linkId && p.end) {
-        if (g.target) updateElement(doc, dId, p.linkId, { [p.end]: g.target, control: null }, LOCAL);
+        if (g.target)
+          updateElement(doc, dId, p.linkId, { [p.end]: g.target, control: null }, LOCAL);
       } else if (g.target && st.layerId) {
-        const id = addElement(doc, dId, { type: 'link', layerId: st.layerId, from: p.from, to: g.target, control: null, polarity: null }, LOCAL);
+        const id = addElement(
+          doc,
+          dId,
+          {
+            type: 'link',
+            layerId: st.layerId,
+            from: p.from,
+            to: g.target,
+            control: null,
+            polarity: null,
+          },
+          LOCAL,
+        );
         set({ selection: [id] });
         if (st.tool === 'link') finishTool();
-      } else if (!g.target && Math.hypot(g.point.x - (elementsRef.current[p.from] as { x: number }).x, g.point.y - (elementsRef.current[p.from] as { y: number }).y) > 40) {
+      } else if (
+        !g.target &&
+        Math.hypot(
+          g.point.x - (elementsRef.current[p.from] as { x: number }).x,
+          g.point.y - (elementsRef.current[p.from] as { y: number }).y,
+        ) > 40
+      ) {
         // Released on empty canvas: create a new variable there, linked from the source.
         set({ editing: { kind: 'new-variable', x: g.point.x, y: g.point.y, linkFrom: p.from } });
         if (st.tool === 'link') finishTool();
@@ -398,7 +597,15 @@ export function Canvas({ peers }: { peers: Peer[] }) {
       const id = addElement(
         doc,
         dId,
-        { type: 'shape', layerId: st.layerId, shape: g.shape, x: Math.round(cx), y: Math.round(cy), w: Math.round(Math.max(w, 24)), h: Math.round(Math.max(h, 24)) },
+        {
+          type: 'shape',
+          layerId: st.layerId,
+          shape: g.shape,
+          x: Math.round(cx),
+          y: Math.round(cy),
+          w: Math.round(Math.max(w, 24)),
+          h: Math.round(Math.max(h, 24)),
+        },
         LOCAL,
       );
       set({ selection: [id] });
@@ -420,7 +627,11 @@ export function Canvas({ peers }: { peers: Peer[] }) {
     const id = target.closest('[data-id]')?.getAttribute('data-id');
     const el: DiagramElement | undefined = id ? diagram?.elements[id] : undefined;
     if (!canEdit || st.tool !== 'select') return;
-    if (el && (el.type === 'variable' || el.type === 'text' || el.type === 'shape') && editable(ctx, [el.id]).length) {
+    if (
+      el &&
+      (el.type === 'variable' || el.type === 'text' || el.type === 'shape') &&
+      editable(ctx, [el.id]).length
+    ) {
       set({ editing: { kind: 'element', id: el.id }, selection: [el.id] });
     } else if (el?.type === 'loop' || el?.type === 'link') {
       set({ selection: [el.id], panelOpen: true, panelTab: 'design' });
@@ -443,11 +654,33 @@ export function Canvas({ peers }: { peers: Peer[] }) {
   const single = selection.length === 1 ? diagram?.elements[selection[0]!] : undefined;
   const singleLayout = single ? layout.byId.get(single.id) : undefined;
   const effSingle = single ? elements[single.id] : undefined;
-  const showHandles = canEdit && !!single && !!effSingle && !!singleLayout && editable(ctx, [single.id]).length > 0 && (!gesture || gesture.kind === 'resize' || gesture.kind === 'curve');
-  const hoverVar = hover && elements[hover]?.type === 'variable' && canEdit && tool === 'select' && !gesture && !editing ? layout.byId.get(hover) : undefined;
+  const showHandles =
+    canEdit &&
+    !!single &&
+    !!effSingle &&
+    !!singleLayout &&
+    editable(ctx, [single.id]).length > 0 &&
+    (!gesture || gesture.kind === 'resize' || gesture.kind === 'curve');
+  const hoverVar =
+    hover &&
+    elements[hover]?.type === 'variable' &&
+    canEdit &&
+    tool === 'select' &&
+    !gesture &&
+    !editing
+      ? layout.byId.get(hover)
+      : undefined;
   const linkDraft = gesture?.kind === 'link' ? gesture : null;
   const cursor =
-    tool === 'hand' ? 'grab' : tool === 'select' ? 'default' : tool === 'comment' ? 'copy' : tool === 'text' ? 'text' : 'crosshair';
+    tool === 'hand'
+      ? 'grab'
+      : tool === 'select'
+        ? 'default'
+        : tool === 'comment'
+          ? 'copy'
+          : tool === 'text'
+            ? 'text'
+            : 'crosshair';
   const gridSize = 16 * z;
 
   return (
@@ -473,7 +706,14 @@ export function Canvas({ peers }: { peers: Peer[] }) {
         }}
       >
         <defs>
-          <pattern id="grid" width={gridSize} height={gridSize} patternUnits="userSpaceOnUse" x={viewport.x % gridSize} y={viewport.y % gridSize}>
+          <pattern
+            id="grid"
+            width={gridSize}
+            height={gridSize}
+            patternUnits="userSpaceOnUse"
+            x={viewport.x % gridSize}
+            y={viewport.y % gridSize}
+          >
             <circle cx={1} cy={1} r={1} fill="var(--grid)" />
           </pattern>
         </defs>
@@ -481,12 +721,29 @@ export function Canvas({ peers }: { peers: Peer[] }) {
         <g transform={`translate(${viewport.x} ${viewport.y}) scale(${z})`}>
           {highlight.map((id) => {
             const l = layout.byId.get(id)?.link;
-            return l ? <path key={`hl-${id}`} d={l.d} stroke="#6366f1" strokeOpacity={0.3} strokeWidth={10} fill="none" strokeLinecap="round" /> : null;
+            return l ? (
+              <path
+                key={`hl-${id}`}
+                d={l.d}
+                stroke="#6366f1"
+                strokeOpacity={0.3}
+                strokeWidth={10}
+                fill="none"
+                strokeLinecap="round"
+              />
+            ) : null;
           })}
           {layout.order.map((id) => {
             const el = elements[id]!;
             const dimmed = !!(linkDraft && el.type !== 'link' && el.type !== 'variable');
-            return <ElementView key={id} layout={layout.byId.get(id)!} hideText={id === editingId} dimmed={dimmed || (linkDraft?.linkId === id)} />;
+            return (
+              <ElementView
+                key={id}
+                layout={layout.byId.get(id)!}
+                hideText={id === editingId}
+                dimmed={dimmed || linkDraft?.linkId === id}
+              />
+            );
           })}
 
           {/* collaborators' selections */}
@@ -496,8 +753,26 @@ export function Canvas({ peers }: { peers: Peer[] }) {
               if (!b) return null;
               return (
                 <g key={`${peer.clientId}-${id}`} pointerEvents="none">
-                  <rect x={b.x - 4} y={b.y - 4} width={b.w + 8} height={b.h + 8} rx={4} fill="none" stroke={peer.user.color} strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeDasharray="4 3" />
-                  <text x={b.x - 4} y={b.y - 8} fontSize={11 / z} fill={peer.user.color} fontWeight={600} fontFamily="system-ui, sans-serif">
+                  <rect
+                    x={b.x - 4}
+                    y={b.y - 4}
+                    width={b.w + 8}
+                    height={b.h + 8}
+                    rx={4}
+                    fill="none"
+                    stroke={peer.user.color}
+                    strokeWidth={1.5}
+                    vectorEffect="non-scaling-stroke"
+                    strokeDasharray="4 3"
+                  />
+                  <text
+                    x={b.x - 4}
+                    y={b.y - 8}
+                    fontSize={11 / z}
+                    fill={peer.user.color}
+                    fontWeight={600}
+                    fontFamily="system-ui, sans-serif"
+                  >
                     {peer.user.name}
                   </text>
                 </g>
@@ -509,13 +784,40 @@ export function Canvas({ peers }: { peers: Peer[] }) {
           {selection.map((id) => {
             const lay = layout.byId.get(id);
             if (!lay) return null;
-            if (lay.link) return <path key={`sel-${id}`} d={lay.link.d} stroke="#6366f1" strokeOpacity={0.35} strokeWidth={6} fill="none" pointerEvents="none" strokeLinecap="round" />;
+            if (lay.link)
+              return (
+                <path
+                  key={`sel-${id}`}
+                  d={lay.link.d}
+                  stroke="#6366f1"
+                  strokeOpacity={0.35}
+                  strokeWidth={6}
+                  fill="none"
+                  pointerEvents="none"
+                  strokeLinecap="round"
+                />
+              );
             const b = lay.bbox;
-            return <rect key={`sel-${id}`} x={b.x - 4} y={b.y - 4} width={b.w + 8} height={b.h + 8} rx={4} fill="none" stroke="#6366f1" strokeWidth={1.5} vectorEffect="non-scaling-stroke" pointerEvents="none" />;
+            return (
+              <rect
+                key={`sel-${id}`}
+                x={b.x - 4}
+                y={b.y - 4}
+                width={b.w + 8}
+                height={b.h + 8}
+                rx={4}
+                fill="none"
+                stroke="#6366f1"
+                strokeWidth={1.5}
+                vectorEffect="non-scaling-stroke"
+                pointerEvents="none"
+              />
+            );
           })}
 
           {/* handles */}
-          {showHandles && effSingle!.type !== 'link' &&
+          {showHandles &&
+            effSingle!.type !== 'link' &&
             handlesFor(effSingle!).map((h) => {
               const pt = handlePoint(resizeBox(effSingle!, singleLayout!.bbox), h);
               const s = 9 / z;
@@ -532,7 +834,16 @@ export function Canvas({ peers }: { peers: Peer[] }) {
                   stroke="#6366f1"
                   strokeWidth={1.5}
                   vectorEffect="non-scaling-stroke"
-                  style={{ cursor: h === 'e' || h === 'w' ? 'ew-resize' : h === 'n' || h === 's' ? 'ns-resize' : h === 'nw' || h === 'se' ? 'nwse-resize' : 'nesw-resize' }}
+                  style={{
+                    cursor:
+                      h === 'e' || h === 'w'
+                        ? 'ew-resize'
+                        : h === 'n' || h === 's'
+                          ? 'ns-resize'
+                          : h === 'nw' || h === 'se'
+                            ? 'nwse-resize'
+                            : 'nesw-resize',
+                  }}
                 />
               );
             })}
@@ -540,10 +851,33 @@ export function Canvas({ peers }: { peers: Peer[] }) {
             <>
               {(['from', 'to'] as const).map((end) => {
                 const pt = end === 'from' ? singleLayout!.link!.start : singleLayout!.link!.end;
-                return <circle key={end} data-handle={end} cx={pt.x} cy={pt.y} r={5 / z} fill="white" stroke="#6366f1" strokeWidth={1.5} vectorEffect="non-scaling-stroke" style={{ cursor: 'move' }} />;
+                return (
+                  <circle
+                    key={end}
+                    data-handle={end}
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={5 / z}
+                    fill="white"
+                    stroke="#6366f1"
+                    strokeWidth={1.5}
+                    vectorEffect="non-scaling-stroke"
+                    style={{ cursor: 'move' }}
+                  />
+                );
               })}
               {effSingle!.type === 'link' && effSingle!.from !== effSingle!.to && (
-                <circle data-handle="curve" cx={singleLayout!.link!.handle.x} cy={singleLayout!.link!.handle.y} r={6 / z} fill="#6366f1" stroke="white" strokeWidth={2} vectorEffect="non-scaling-stroke" style={{ cursor: 'grab' }}>
+                <circle
+                  data-handle="curve"
+                  cx={singleLayout!.link!.handle.x}
+                  cy={singleLayout!.link!.handle.y}
+                  r={6 / z}
+                  fill="#6366f1"
+                  stroke="white"
+                  strokeWidth={2}
+                  vectorEffect="non-scaling-stroke"
+                  style={{ cursor: 'grab' }}
+                >
                   <title>Drag to curve · double-click to straighten</title>
                 </circle>
               )}
@@ -554,26 +888,67 @@ export function Canvas({ peers }: { peers: Peer[] }) {
           {hoverVar &&
             (['n', 'e', 's', 'w'] as const)
               // Don't stack connectors on top of the selected variable's side resize handles.
-              .filter((side) => !(showHandles && single?.id === hoverVar.id && (side === 'e' || side === 'w') && handlesFor(effSingle!).includes(side)))
+              .filter(
+                (side) =>
+                  !(
+                    showHandles &&
+                    single?.id === hoverVar.id &&
+                    (side === 'e' || side === 'w') &&
+                    handlesFor(effSingle!).includes(side)
+                  ),
+              )
               .map((side) => {
-              const b = hoverVar.bbox;
-              const pt = handlePoint({ x: b.x - 10 / z, y: b.y - 10 / z, w: b.w + 20 / z, h: b.h + 20 / z }, side);
-              return (
-                <g key={side} data-connector={hoverVar.id} style={{ cursor: 'crosshair' }} onPointerEnter={() => setHover(hoverVar.id)}>
-                  <circle cx={pt.x} cy={pt.y} r={10 / z} fill="transparent" />
-                  <circle cx={pt.x} cy={pt.y} r={4 / z} fill="#6366f1" stroke="white" strokeWidth={1.5} vectorEffect="non-scaling-stroke">
-                    <title>Drag to draw a causal link</title>
-                  </circle>
-                </g>
-              );
-            })}
+                const b = hoverVar.bbox;
+                const pt = handlePoint(
+                  { x: b.x - 10 / z, y: b.y - 10 / z, w: b.w + 20 / z, h: b.h + 20 / z },
+                  side,
+                );
+                return (
+                  <g
+                    key={side}
+                    data-connector={hoverVar.id}
+                    style={{ cursor: 'crosshair' }}
+                    onPointerEnter={() => setHover(hoverVar.id)}
+                  >
+                    <circle cx={pt.x} cy={pt.y} r={10 / z} fill="transparent" />
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={4 / z}
+                      fill="#6366f1"
+                      stroke="white"
+                      strokeWidth={1.5}
+                      vectorEffect="non-scaling-stroke"
+                    >
+                      <title>Drag to draw a causal link</title>
+                    </circle>
+                  </g>
+                );
+              })}
 
           {/* link being drawn (own) */}
-          {linkDraft && <LinkDraft layout={layout} from={linkDraft.from} point={linkDraft.point} target={linkDraft.target} color="#6366f1" zoom={z} />}
+          {linkDraft && (
+            <LinkDraft
+              layout={layout}
+              from={linkDraft.from}
+              point={linkDraft.point}
+              target={linkDraft.target}
+              color="#6366f1"
+              zoom={z}
+            />
+          )}
           {/* links being drawn by others */}
           {localPeers.map((peer) =>
             peer.gesture?.kind === 'link' ? (
-              <LinkDraft key={`draft-${peer.clientId}`} layout={layout} from={peer.gesture.from} point={peer.gesture.point} target={peer.gesture.target} color={peer.user.color} zoom={z} />
+              <LinkDraft
+                key={`draft-${peer.clientId}`}
+                layout={layout}
+                from={peer.gesture.from}
+                point={peer.gesture.point}
+                target={peer.gesture.target}
+                color={peer.user.color}
+                zoom={z}
+              />
             ) : null,
           )}
 
@@ -606,8 +981,30 @@ export function Canvas({ peers }: { peers: Peer[] }) {
               pointerEvents="none"
             />
           )}
-          {guides?.x !== undefined && <line x1={guides.x} x2={guides.x} y1={-1e5} y2={1e5} stroke="#ec4899" strokeWidth={1} vectorEffect="non-scaling-stroke" pointerEvents="none" />}
-          {guides?.y !== undefined && <line y1={guides.y} y2={guides.y} x1={-1e5} x2={1e5} stroke="#ec4899" strokeWidth={1} vectorEffect="non-scaling-stroke" pointerEvents="none" />}
+          {guides?.x !== undefined && (
+            <line
+              x1={guides.x}
+              x2={guides.x}
+              y1={-1e5}
+              y2={1e5}
+              stroke="#ec4899"
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+              pointerEvents="none"
+            />
+          )}
+          {guides?.y !== undefined && (
+            <line
+              y1={guides.y}
+              y2={guides.y}
+              x1={-1e5}
+              x2={1e5}
+              stroke="#ec4899"
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+              pointerEvents="none"
+            />
+          )}
         </g>
       </svg>
       <CanvasOverlay layout={layout} elements={elements} peers={localPeers} size={size} />
@@ -615,15 +1012,51 @@ export function Canvas({ peers }: { peers: Peer[] }) {
   );
 }
 
-function LinkDraft({ layout, from, point, target, color, zoom }: { layout: DiagramLayout; from: string; point: Point; target: string | null; color: string; zoom: number }) {
+function LinkDraft({
+  layout,
+  from,
+  point,
+  target,
+  color,
+  zoom,
+}: {
+  layout: DiagramLayout;
+  from: string;
+  point: Point;
+  target: string | null;
+  color: string;
+  zoom: number;
+}) {
   const a = layout.byId.get(from)?.boundary;
   if (!a) return null;
   const t = target ? layout.byId.get(target) : undefined;
   const end = t?.boundary ? { x: t.boundary.cx, y: t.boundary.cy } : point;
   return (
     <g pointerEvents="none">
-      {t && <rect x={t.bbox.x - 4} y={t.bbox.y - 4} width={t.bbox.w + 8} height={t.bbox.h + 8} rx={4} fill={color} fillOpacity={0.08} stroke={color} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />}
-      <line x1={a.cx} y1={a.cy} x2={end.x} y2={end.y} stroke={color} strokeWidth={1.5} strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />
+      {t && (
+        <rect
+          x={t.bbox.x - 4}
+          y={t.bbox.y - 4}
+          width={t.bbox.w + 8}
+          height={t.bbox.h + 8}
+          rx={4}
+          fill={color}
+          fillOpacity={0.08}
+          stroke={color}
+          strokeWidth={1.5}
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
+      <line
+        x1={a.cx}
+        y1={a.cy}
+        x2={end.x}
+        y2={end.y}
+        stroke={color}
+        strokeWidth={1.5}
+        strokeDasharray="5 4"
+        vectorEffect="non-scaling-stroke"
+      />
       <circle cx={end.x} cy={end.y} r={3.5 / zoom} fill={color} />
     </g>
   );

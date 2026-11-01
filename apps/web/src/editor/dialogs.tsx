@@ -4,11 +4,28 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { byKey, type ProjectSnapshot } from '@cld/model';
 import { lightTheme, renderDiagramSvg } from '@cld/render';
-import { atLeast, colorForUser, INVITABLE_ROLES, ROLE_LABELS, type InvitableRole } from '@cld/shared';
-import { Avatar, Button, cx, Dialog, Input, Kbd, Segmented, Select, Spinner } from '../components/ui';
+import {
+  atLeast,
+  colorForUser,
+  INVITABLE_ROLES,
+  ROLE_LABELS,
+  type InvitableRole,
+} from '@cld/shared';
+import {
+  Avatar,
+  Button,
+  cx,
+  Dialog,
+  Input,
+  Kbd,
+  Segmented,
+  Select,
+  Spinner,
+} from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { keys, useLinks, useMembers, useVersions } from '../lib/queries';
 import { timeAgo } from '../lib/time';
+import { CommandPalette } from './CommandPalette';
 import { useEditorCtx } from './context';
 import { mdlPreflight, runExport, type ExportFormat, type ExportOptions } from './exporting';
 import { useEditor } from './store';
@@ -25,6 +42,7 @@ export function EditorDialogs() {
       {dialog === 'export' && <ExportDialog onOpenChange={close} />}
       {dialog === 'versions' && <VersionsDialog onOpenChange={close} />}
       {dialog === 'shortcuts' && <ShortcutsDialog onOpenChange={close} />}
+      <CommandPalette />
     </>
   );
 }
@@ -42,7 +60,11 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
   const [linkRole, setLinkRole] = useState<InvitableRole>('editor');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: keys.members(projectId) }), qc.invalidateQueries({ queryKey: keys.links(projectId) })]);
+  const refresh = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: keys.members(projectId) }),
+      qc.invalidateQueries({ queryKey: keys.links(projectId) }),
+    ]);
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
     try {
       await fn();
@@ -56,8 +78,14 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
     if (!email.trim()) return;
     setBusy(true);
     try {
-      const res = await api<{ status: 'added' | 'invited' }>(`/projects/${projectId}/members`, { body: { email: email.trim(), role: inviteRole } });
-      toast.success(res.status === 'added' ? `${email.trim()} now has access` : `Invite saved — ${email.trim()} gets access when they sign up with this email`);
+      const res = await api<{ status: 'added' | 'invited' }>(`/projects/${projectId}/members`, {
+        body: { email: email.trim(), role: inviteRole },
+      });
+      toast.success(
+        res.status === 'added'
+          ? `${email.trim()} now has access`
+          : `Invite saved — ${email.trim()} gets access when they sign up with this email`,
+      );
       setEmail('');
       await refresh();
     } catch (e) {
@@ -73,7 +101,13 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
   };
 
   return (
-    <Dialog open onOpenChange={onOpenChange} title={`Share “${projectName}”`} description="Everyone with access sees changes live." wide>
+    <Dialog
+      open
+      onOpenChange={onOpenChange}
+      title={`Share “${projectName}”`}
+      description="Everyone with access sees changes live."
+      wide
+    >
       {canInvite && (
         <form
           className="flex flex-col gap-2 sm:flex-row"
@@ -82,15 +116,31 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
             void invite();
           }}
         >
-          <Input type="email" required placeholder="Email address" aria-label="Email address" value={email} onChange={(e) => setEmail(e.target.value)} className="flex-1" />
-          <Select ariaLabel="Role" value={inviteRole} onChange={setInviteRole} options={roleOptions} className="h-9" />
+          <Input
+            type="email"
+            required
+            placeholder="Email address"
+            aria-label="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="flex-1"
+          />
+          <Select
+            ariaLabel="Role"
+            value={inviteRole}
+            onChange={setInviteRole}
+            options={roleOptions}
+            className="h-9"
+          />
           <Button type="submit" variant="primary" loading={busy}>
             Invite
           </Button>
         </form>
       )}
 
-      <h3 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-muted">People with access</h3>
+      <h3 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-muted">
+        People with access
+      </h3>
       {members.isLoading ? (
         <Spinner />
       ) : (
@@ -100,7 +150,10 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
               <Avatar name={m.name} image={m.image} color={colorForUser(m.userId)} size={32} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-app">
-                  {m.name} {m.userId === session.user.id && <span className="font-normal text-muted">(you)</span>}
+                  {m.name}{' '}
+                  {m.userId === session.user.id && (
+                    <span className="font-normal text-muted">(you)</span>
+                  )}
                 </div>
                 <div className="truncate text-xs text-muted">{m.email}</div>
               </div>
@@ -111,10 +164,27 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
                   <Select
                     ariaLabel={`Role of ${m.name}`}
                     value={m.role as InvitableRole}
-                    onChange={(r) => run(() => api(`/projects/${projectId}/members/${m.userId}`, { method: 'PATCH', body: { role: r } }))}
+                    onChange={(r) =>
+                      run(() =>
+                        api(`/projects/${projectId}/members/${m.userId}`, {
+                          method: 'PATCH',
+                          body: { role: r },
+                        }),
+                      )
+                    }
                     options={roleOptions}
                   />
-                  <button aria-label={`Remove ${m.name}`} className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-red-600" onClick={() => run(() => api(`/projects/${projectId}/members/${m.userId}`, { method: 'DELETE' }), `${m.name} was removed`)}>
+                  <button
+                    aria-label={`Remove ${m.name}`}
+                    className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-red-600"
+                    onClick={() =>
+                      run(
+                        () =>
+                          api(`/projects/${projectId}/members/${m.userId}`, { method: 'DELETE' }),
+                        `${m.name} was removed`,
+                      )
+                    }
+                  >
                     <Trash2 className="size-4" />
                   </button>
                 </>
@@ -130,7 +200,13 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
               </div>
               <span className="text-sm text-muted">{ROLE_LABELS[inv.role]}</span>
               {canInvite && (
-                <button aria-label={`Cancel invite for ${inv.email}`} className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-red-600" onClick={() => run(() => api(`/projects/${projectId}/invites/${inv.id}`, { method: 'DELETE' }))}>
+                <button
+                  aria-label={`Cancel invite for ${inv.email}`}
+                  className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-red-600"
+                  onClick={() =>
+                    run(() => api(`/projects/${projectId}/invites/${inv.id}`, { method: 'DELETE' }))
+                  }
+                >
                   <Trash2 className="size-4" />
                 </button>
               )}
@@ -141,11 +217,19 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
 
       {canInvite && (
         <>
-          <h3 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-muted">Invite links</h3>
-          <p className="mb-3 text-sm text-muted">Anyone with a link can join after signing in. Revoke a link to stop new people from joining.</p>
+          <h3 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-muted">
+            Invite links
+          </h3>
+          <p className="mb-3 text-sm text-muted">
+            Anyone with a link can join after signing in. Revoke a link to stop new people from
+            joining.
+          </p>
           <ul className="space-y-2">
             {links.data?.map((l) => (
-              <li key={l.id} className="flex items-center gap-2 rounded-lg border border-app px-3 py-2">
+              <li
+                key={l.id}
+                className="flex items-center gap-2 rounded-lg border border-app px-3 py-2"
+              >
                 <Link2 className="size-4 shrink-0 text-muted" />
                 <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">
                   /invite/{l.token.slice(0, 10)}…
@@ -155,18 +239,35 @@ function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
                   {copied === l.token ? <Check className="size-4" /> : <Copy className="size-4" />}
                   {copied === l.token ? 'Copied' : 'Copy'}
                 </Button>
-                <button aria-label="Revoke link" className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-red-600" onClick={() => run(() => api(`/projects/${projectId}/links/${l.id}`, { method: 'DELETE' }), 'Link revoked')}>
+                <button
+                  aria-label="Revoke link"
+                  className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-red-600"
+                  onClick={() =>
+                    run(
+                      () => api(`/projects/${projectId}/links/${l.id}`, { method: 'DELETE' }),
+                      'Link revoked',
+                    )
+                  }
+                >
                   <Trash2 className="size-4" />
                 </button>
               </li>
             ))}
           </ul>
           <div className="mt-3 flex gap-2">
-            <Select ariaLabel="Link role" value={linkRole} onChange={setLinkRole} options={roleOptions} className="h-9" />
+            <Select
+              ariaLabel="Link role"
+              value={linkRole}
+              onChange={setLinkRole}
+              options={roleOptions}
+              className="h-9"
+            />
             <Button
               onClick={() =>
                 run(async () => {
-                  const l = await api<{ token: string }>(`/projects/${projectId}/links`, { body: { role: linkRole } });
+                  const l = await api<{ token: string }>(`/projects/${projectId}/links`, {
+                    body: { role: linkRole },
+                  });
                   await copy(l.token);
                 }, 'Link created and copied')
               }
@@ -193,7 +294,14 @@ const FORMATS: { value: ExportFormat; label: string; hint: string }[] = [
 function ExportDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {
   const { store, projectName } = useEditorCtx();
   const { diagramId, selection } = useEditor();
-  const [o, setO] = useState<ExportOptions>({ format: 'png', scope: 'diagram', scale: 2, background: 'white', dark: false, includeHidden: false });
+  const [o, setO] = useState<ExportOptions>({
+    format: 'png',
+    scope: 'diagram',
+    scale: 2,
+    background: 'white',
+    dark: false,
+    includeHidden: false,
+  });
   const [busy, setBusy] = useState(false);
   const snap = store.get().snapshot;
   const visual = o.format === 'png' || o.format === 'svg' || o.format === 'pdf';
@@ -201,7 +309,12 @@ function ExportDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) 
   const preview = useMemo(() => {
     if (!diagramId || !visual) return null;
     try {
-      return renderDiagramSvg(snap, diagramId, { theme: o.dark ? undefined : lightTheme, background: null, includeHidden: o.includeHidden, only: o.scope === 'selection' && selection.length ? new Set(selection) : undefined }).svg;
+      return renderDiagramSvg(snap, diagramId, {
+        theme: o.dark ? undefined : lightTheme,
+        background: null,
+        includeHidden: o.includeHidden,
+        only: o.scope === 'selection' && selection.length ? new Set(selection) : undefined,
+      }).svg;
     } catch {
       return null;
     }
@@ -245,8 +358,24 @@ function ExportDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) 
         {FORMATS.map((f) => (
           <button
             key={f.value}
-            onClick={() => setO({ ...o, format: f.value, scope: f.value === 'mdl' || f.value === 'json' ? 'all' : o.scope === 'all' && f.value !== 'pdf' ? 'diagram' : o.scope })}
-            className={cx('rounded-xl border px-2 py-2.5 text-sm font-medium', o.format === f.value ? 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300' : 'border-app text-app hover:bg-surface-2')}
+            onClick={() =>
+              setO({
+                ...o,
+                format: f.value,
+                scope:
+                  f.value === 'mdl' || f.value === 'json'
+                    ? 'all'
+                    : o.scope === 'all' && f.value !== 'pdf'
+                      ? 'diagram'
+                      : o.scope,
+              })
+            }
+            className={cx(
+              'rounded-xl border px-2 py-2.5 text-sm font-medium',
+              o.format === f.value
+                ? 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300'
+                : 'border-app text-app hover:bg-surface-2',
+            )}
           >
             {f.label}
           </button>
@@ -257,8 +386,19 @@ function ExportDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) 
       {visual && (
         <div className="mt-5 space-y-3">
           {preview && (
-            <div className={cx('flex h-40 items-center justify-center overflow-hidden rounded-xl border border-app p-3', o.dark ? 'bg-[#1c1b1a]' : 'bg-white', o.background === 'transparent' && 'bg-[repeating-conic-gradient(#e7e5e4_0%_25%,transparent_0%_50%)] [background-size:16px_16px]')}>
-              <img alt="Export preview" className="max-h-full max-w-full" src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(preview)}`} />
+            <div
+              className={cx(
+                'flex h-40 items-center justify-center overflow-hidden rounded-xl border border-app p-3',
+                o.dark ? 'bg-[#1c1b1a]' : 'bg-white',
+                o.background === 'transparent' &&
+                  'bg-[repeating-conic-gradient(#e7e5e4_0%_25%,transparent_0%_50%)] [background-size:16px_16px]',
+              )}
+            >
+              <img
+                alt="Export preview"
+                className="max-h-full max-w-full"
+                src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(preview)}`}
+              />
             </div>
           )}
           {opt(
@@ -275,7 +415,15 @@ function ExportDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) 
             />,
           )}
           {o.format === 'png' &&
-            opt('Resolution', <Segmented size="sm" value={String(o.scale)} onChange={(s) => setO({ ...o, scale: Number(s) })} options={[1, 2, 4].map((n) => ({ value: String(n), label: `${n}×` }))} />)}
+            opt(
+              'Resolution',
+              <Segmented
+                size="sm"
+                value={String(o.scale)}
+                onChange={(s) => setO({ ...o, scale: Number(s) })}
+                options={[1, 2, 4].map((n) => ({ value: String(n), label: `${n}×` }))}
+              />,
+            )}
           {opt(
             'Background',
             <Segmented
@@ -284,14 +432,32 @@ function ExportDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) 
               onChange={(background) => setO({ ...o, background })}
               options={[
                 { value: 'white', label: 'Solid' },
-                ...(o.format !== 'pdf' ? [{ value: 'transparent' as const, label: 'Transparent' }] : []),
+                ...(o.format !== 'pdf'
+                  ? [{ value: 'transparent' as const, label: 'Transparent' }]
+                  : []),
               ]}
             />,
           )}
-          {opt('Colors', <Segmented size="sm" value={o.dark ? 'dark' : 'light'} onChange={(v) => setO({ ...o, dark: v === 'dark' })} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />)}
+          {opt(
+            'Colors',
+            <Segmented
+              size="sm"
+              value={o.dark ? 'dark' : 'light'}
+              onChange={(v) => setO({ ...o, dark: v === 'dark' })}
+              options={[
+                { value: 'light', label: 'Light' },
+                { value: 'dark', label: 'Dark' },
+              ]}
+            />,
+          )}
           <label className="flex items-center justify-between text-sm text-app">
             Include hidden layers
-            <input type="checkbox" className="size-4 accent-[var(--ring)]" checked={o.includeHidden} onChange={(e) => setO({ ...o, includeHidden: e.target.checked })} />
+            <input
+              type="checkbox"
+              className="size-4 accent-[var(--ring)]"
+              checked={o.includeHidden}
+              onChange={(e) => setO({ ...o, includeHidden: e.target.checked })}
+            />
           </label>
         </div>
       )}
@@ -307,7 +473,11 @@ function ExportDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) 
           </ul>
         </div>
       )}
-      {o.format === 'mdl' && warnings.length === 0 && <p className="mt-5 text-sm text-muted">Everything in this project can be represented in Vensim.</p>}
+      {o.format === 'mdl' && warnings.length === 0 && (
+        <p className="mt-5 text-sm text-muted">
+          Everything in this project can be represented in Vensim.
+        </p>
+      )}
     </Dialog>
   );
 }
@@ -329,7 +499,10 @@ function VersionsDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }
     try {
       const snap = await api<ProjectSnapshot>(`/projects/${projectId}/versions/${id}/snapshot`);
       const first = Object.values(snap.diagrams).sort(byKey((d) => d.order))[0];
-      const svg = first && Object.keys(first.elements).length ? renderDiagramSvg(snap, first.id, { theme: lightTheme, background: null }).svg : null;
+      const svg =
+        first && Object.keys(first.elements).length
+          ? renderDiagramSvg(snap, first.id, { theme: lightTheme, background: null }).svg
+          : null;
       setPreview({ id, svg });
     } catch (e) {
       toast.error(errorMessage(e));
@@ -352,7 +525,9 @@ function VersionsDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }
     try {
       await api(`/projects/${projectId}/versions/${selected}/restore`, { method: 'POST' });
       await qc.invalidateQueries({ queryKey: keys.versions(projectId) });
-      toast.success('Version restored for everyone. The previous state was saved as “Before restore”.');
+      toast.success(
+        'Version restored for everyone. The previous state was saved as “Before restore”.',
+      );
       onOpenChange(false);
     } catch (e) {
       toast.error(errorMessage(e));
@@ -360,10 +535,21 @@ function VersionsDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }
       setBusy(false);
     }
   };
-  const kindLabel = { auto: 'Autosave', manual: 'Saved', import: 'Imported', restore: 'Before restore' } as const;
+  const kindLabel = {
+    auto: 'Autosave',
+    manual: 'Saved',
+    import: 'Imported',
+    restore: 'Before restore',
+  } as const;
 
   return (
-    <Dialog open onOpenChange={onOpenChange} title="Version history" description="Autosaves are kept every 10 minutes while people edit." wide>
+    <Dialog
+      open
+      onOpenChange={onOpenChange}
+      title="Version history"
+      description="Autosaves are kept every 10 minutes while people edit."
+      wide
+    >
       {canEdit && (
         <form
           className="mb-4 flex gap-2"
@@ -372,7 +558,13 @@ function VersionsDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }
             void save();
           }}
         >
-          <Input placeholder="Name this version, e.g. “Before workshop”" aria-label="Version name" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={200} />
+          <Input
+            placeholder="Name this version, e.g. “Before workshop”"
+            aria-label="Version name"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            maxLength={200}
+          />
           <Button type="submit" disabled={!label.trim()}>
             Save version
           </Button>
@@ -384,7 +576,13 @@ function VersionsDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }
           {versions.data?.length === 0 && <p className="text-sm text-muted">No versions yet.</p>}
           {versions.data?.map((v) => (
             <li key={v.id}>
-              <button onClick={() => select(v.id)} className={cx('w-full rounded-lg px-3 py-2 text-left', selected === v.id ? 'bg-accent-50 dark:bg-accent-500/10' : 'hover:bg-surface-2')}>
+              <button
+                onClick={() => select(v.id)}
+                className={cx(
+                  'w-full rounded-lg px-3 py-2 text-left',
+                  selected === v.id ? 'bg-accent-50 dark:bg-accent-500/10' : 'hover:bg-surface-2',
+                )}
+              >
                 <div className="flex items-center gap-2 text-sm font-medium text-app">
                   <History className="size-3.5 text-muted" />
                   {v.label && v.kind === 'manual' ? v.label : kindLabel[v.kind]}
@@ -403,7 +601,11 @@ function VersionsDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }
           ) : !preview ? (
             <Spinner className="m-auto" />
           ) : preview.svg ? (
-            <img alt="Version preview" className="m-auto max-h-64 max-w-full" src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(preview.svg)}`} />
+            <img
+              alt="Version preview"
+              className="m-auto max-h-64 max-w-full"
+              src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(preview.svg)}`}
+            />
           ) : (
             <p className="m-auto text-sm text-stone-500">This version's first diagram is empty.</p>
           )}
@@ -440,6 +642,7 @@ export const SHORTCUTS: [string, string[]][] = [
   ['Nudge (×10 with Shift)', ['← ↑ → ↓']],
   ['Bring forward / to front', [`${mod} ]`, `${mod} ⇧ ]`]],
   ['Zoom to fit / selection / 100%', ['⇧ 1', '⇧ 2', `${mod} 0`]],
+  ['Search variables and commands', [`${mod} K`]],
   ['Export', [`${mod} E`]],
   ['Toggle side panel', [`${mod} .`]],
   ['Keep proportions while resizing / no snapping', ['Shift', 'Alt']],
@@ -463,4 +666,3 @@ function ShortcutsDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void 
     </Dialog>
   );
 }
-
