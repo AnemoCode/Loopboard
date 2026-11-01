@@ -1,0 +1,185 @@
+{UTF-8}
+Demand for Ambu Products  = A FUNCTION OF( Brand Loyalty to Ambu,Price per Product)
+	~	
+	~		|
+
+Ambu Labor Intensity  = A FUNCTION OF( "Hospital Staff Training in Endoscope Use (by Ambu)"\
+		)
+	~	
+	~		|
+
+Brand Loyalty to Ambu  = A FUNCTION OF( Hospital Satisfaction)
+	~	
+	~		|
+
+"After-use Effort of Hospital (collection of Product)"  = A FUNCTION OF( "No. of Reusable Ambu Products in Circulation"\
+		)
+	~	
+	~		|
+
+"Number of Single-Use Ambu Products"  = A FUNCTION OF( "No. of Reusable Ambu Products in Circulation"\
+		)
+	~	
+	~		|
+
+Cleaning Facility Workload  = A FUNCTION OF( "No. of Reusable Ambu Products in Circulation"\
+		)
+	~	
+	~		|
+
+Clinical Treatment Accurracy  = A FUNCTION OF( Proper Use of Modular Endoscope)
+	~	
+	~		|
+
+Hospital Satisfaction  = A FUNCTION OF( Clinical Treatment Accurracy,Hospital Staff Workload\
+		,Waste Disposal Cost of Hospital)
+	~	
+	~		|
+
+Hospital Staff Workload  = A FUNCTION OF( "After-use Effort of Hospital (collection of Product)"\
+		)
+	~	
+	~		|
+
+"No. of Reusable Ambu Products in Circulation"  = A FUNCTION OF( Demand for Ambu Products\
+		)
+	~	
+	~		|
+
+Price per Product  = A FUNCTION OF( Cleaning Facility Workload)
+	~	
+	~		|
+
+Proper Use of Modular Endoscope  = A FUNCTION OF( Application Skills of Endoscope of Hospital Staff\
+		)
+	~	
+	~		|
+
+Application Skills of Endoscope of Hospital Staff  = A FUNCTION OF( "Hospital Staff Training in Endoscope Use (by Ambu)"\
+		)
+	~	
+	~		|
+
+"Hospital Staff Training in Endoscope Use (by Ambu)"  = A FUNCTION OF( Demand for Ambu Products\
+		)
+	~	
+	~		|
+
+Hospital Waste  = A FUNCTION OF( "Number of Single-Use Ambu Products")
+	~	
+	~		|
+
+Waste Disposal Cost of Hospital  = A FUNCTION OF( Hospital Waste)
+	~	
+	~		|
+
+********************************************************
+	.Control
+********************************************************~
+		Simulation Control Parameters
+	|
+
+FINAL TIME  = 100
+	~	Month
+	~	The final time for the simulation.
+	|
+
+INITIAL TIME  = 0
+	~	Month
+	~	The initial time for the simulation.
+	|
+
+SAVEPER  = 
+        TIME STEP
+	~	Month [0,?]
+	~	The frequency with which output is stored.
+	|
+
+TIME STEP  = 1
+	~	Month [0,?]
+	~	The time step for the simulation.
+	|
+
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*View 1
+$-1--1--1,0,|12||-1--1--1|-1--1--1|-1--1--1|-1--1--1|-1--1--1|96,96,120,2
+10,1,"Hospital Staff Training in Endoscope Use (by Ambu)",455,247,64,27,8,3,0,3,-1,0,0,0,50-153-204,0-0-0,|||255-0-127,0,0,0,0,0,0
+10,2,Proper Use of Modular Endoscope,759,119,60,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,3,Application Skills of Endoscope of Hospital Staff,562,130,59,27,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,4,Clinical Treatment Accurracy,905,225,64,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,5,Hospital Satisfaction,840,323,58,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,6,Demand for Ambu Products,571,357,50,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,7,1,3,1,0,43,0,0,192,0,-1--1--1,,1|(459,163)|
+1,8,3,2,1,0,43,0,0,192,0,-1--1--1,,1|(635,86)|
+1,9,2,4,1,0,43,0,0,192,0,-1--1--1,,1|(875,165)|
+1,10,4,5,1,0,43,0,0,192,0,-1--1--1,,1|(879,276)|
+1,11,6,1,1,0,43,0,0,192,0,-1--1--1,,1|(492,292)|
+10,12,Ambu Labor Intensity,157,283,57,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,13,1,12,1,0,43,0,0,192,0,-1--1--1,,1|(281,200)|
+10,14,Cleaning Facility Workload,281,481,60,26,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-0-127,0,0,0,0,0,0
+10,15,Hospital Staff Workload,780,467,61,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,16,"After-use Effort of Hospital (collection of Product)",650,563,65,27,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,17,15,5,1,0,45,0,0,192,0,-1--1--1,,1|(865,383)|
+1,18,16,15,1,0,43,0,0,192,0,-1--1--1,,1|(730,521)|
+10,19,"Number of Single-Use Ambu Products",737,662,57,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,20,Hospital Waste,975,569,64,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,21,Waste Disposal Cost of Hospital,986,445,60,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,22,19,20,1,0,43,0,0,192,0,-1--1--1,,1|(901,633)|
+1,23,20,21,1,0,43,0,0,192,0,-1--1--1,,1|(1007,519)|
+1,24,21,5,1,0,45,0,0,192,0,-1--1--1,,1|(962,385)|
+10,25,"No. of Reusable Ambu Products in Circulation",492,486,59,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,26,6,25,1,0,43,0,0,192,0,-1--1--1,,1|(542,414)|
+1,27,25,14,1,0,43,0,0,192,0,-1--1--1,,1|(409,510)|
+12,28,0,672,253,28,28,4,7,0,0,-1,0,0,0,0,0,0,0,0,0
+R
+12,29,0,631,466,28,28,4,7,0,0,-1,0,0,0,0,0,0,0,0,0
+B
+12,30,0,849,557,28,28,5,7,0,0,-1,0,0,0,0,0,0,0,0,0
+B
+10,31,Price per Product,347,324,47,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,32,14,31,1,0,45,0,0,192,0,-1--1--1,,1|(285,397)|
+1,33,31,6,1,0,45,0,0,192,0,-1--1--1,,1|(425,310)|
+12,34,0,433,409,28,28,4,7,0,0,-1,0,0,0,0,0,0,0,0,0
+R
+1,35,25,16,1,0,43,0,0,192,0,-1--1--1,,1|(522,542)|
+1,36,25,19,1,0,43,0,0,192,0,-1--1--1,,1|(526,601)|
+10,37,Brand Loyalty to Ambu,709,369,41,29,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,38,5,37,1,0,43,0,0,192,0,-1--1--1,,1|(803,368)|
+1,39,37,6,1,0,43,0,0,192,0,-1--1--1,,1|(668,396)|
+12,40,0,713,710,80,40,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+12,41,0,256,515,80,40,8,7,0,0,-1,0,0,0,0,0,0,0,0,0
+TODO: Wenn zuende gedacht dann besser ausarbeiten
+12,42,0,303,401,80,40,8,7,0,0,-1,0,0,0,0,0,0,0,0,0
+Problem: Hier muss noch was zwischen, weil Kosten für externen Dienstleister sich anpassen und dadurch auch unsere Kosten, die wir (vielleicht?) an den Kunden weitergeben? Oder auch nicht? 
+///---\\\
+:L<%^E!@
+5:Time
+19:120,0
+24:0
+25:0
+26:0
+23:0
+15:0,0,0,0,0,0
+27:0,
+34:0,
+42:0
+72:0
+73:0
+95:0
+96:0
+97:0
+77:0
+78:0
+102:1
+93:0
+94:0
+92:0
+91:0
+90:0
+87:0
+75:
+43:
+103:8,8,8,3,8
+105:0,0,0,0,0,0,0,0,0,0
+104:Vensim Sans|12||0-0-0|0-0-0|-1--1--1|0-0-255|192-192-192|-1--1--1
