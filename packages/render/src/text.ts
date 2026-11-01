@@ -46,7 +46,6 @@ export function wrapText(text: string, font: Font, maxWidth: number): string[] {
         continue;
       }
       if (line) out.push(line);
-      line = '';
       if (measureText(word, font) <= width) {
         line = word;
         continue;

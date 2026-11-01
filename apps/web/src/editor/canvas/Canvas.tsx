@@ -7,7 +7,7 @@ import { useEditorCtx } from '../context';
 import { useDocView } from '../docView';
 import { createPresencePublisher, type Peer } from '../presence';
 import { LOCAL } from '../session';
-import { editor, useEditor, type Gesture } from '../store';
+import { editor, useEditor } from '../store';
 import { useShortcuts } from '../useShortcuts';
 import { CanvasOverlay } from './CanvasOverlay';
 import { applyGesture, boxContains, boxesIntersect, handlePoint, handlesFor, resizeBox, resizeTo, snapMove, type Handle } from './gestures';
@@ -50,7 +50,7 @@ export function Canvas({ peers }: { peers: Peer[] }) {
     for (const p of localPeers) els = applyGesture(els, p.gesture);
     return applyGesture(els, gesture);
   }, [diagram, localPeers, gesture]);
-  const layers = diagram?.layers ?? {};
+  const layers = useMemo(() => diagram?.layers ?? {}, [diagram]);
   const variableName = useCallback((id: string) => view.variables[id]?.name ?? '', [view.variables]);
   const layout: DiagramLayout = useMemo(
     () => layoutDiagram({ elements, layers, variableName }, theme, cache.current),
@@ -552,7 +552,10 @@ export function Canvas({ peers }: { peers: Peer[] }) {
 
           {/* connectors on hovered variables: drag to create a causal link */}
           {hoverVar &&
-            (['n', 'e', 's', 'w'] as const).map((side) => {
+            (['n', 'e', 's', 'w'] as const)
+              // Don't stack connectors on top of the selected variable's side resize handles.
+              .filter((side) => !(showHandles && single?.id === hoverVar.id && (side === 'e' || side === 'w') && handlesFor(effSingle!).includes(side)))
+              .map((side) => {
               const b = hoverVar.bbox;
               const pt = handlePoint({ x: b.x - 10 / z, y: b.y - 10 / z, w: b.w + 20 / z, h: b.h + 20 / z }, side);
               return (

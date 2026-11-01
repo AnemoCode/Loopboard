@@ -193,7 +193,12 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
             'fixed left-1/2 top-1/2 z-50 max-h-[85vh] w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-app bg-surface p-6 shadow-2xl animate-pop focus:outline-none',
             wide ? 'max-w-2xl' : 'max-w-md',
           )}
-          aria-describedby={description ? undefined : undefined}
+          // Keep focus where React's autoFocus put it (or on the dialog) instead of the close button.
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            const content = e.currentTarget as HTMLElement;
+            if (!content.contains(document.activeElement)) content.focus();
+          }}
         >
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>

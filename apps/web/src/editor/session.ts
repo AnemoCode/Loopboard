@@ -88,7 +88,6 @@ export function createSession(projectId: string, me: Me): Session {
       if (status === WebSocketStatus.Disconnected && session.status !== 'denied') updateStatus('offline');
       if (status === WebSocketStatus.Connecting && session.status === 'offline') updateStatus('connecting');
     },
-    // After a role change the server closes the socket; the provider reconnects with fresh permissions.
   });
   return session;
 }
