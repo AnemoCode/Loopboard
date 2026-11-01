@@ -43,7 +43,17 @@ export const inviteBody = z.object({
 });
 
 export const roleBody = z.object({ role: z.enum(INVITABLE_ROLES) });
-export const linkBody = z.object({ role: z.enum(INVITABLE_ROLES) });
+export const linkBody = z.object({
+  role: z.enum(INVITABLE_ROLES),
+  allowGuests: z.boolean().default(true),
+});
+export const linkPatchBody = z.object({
+  role: z.enum(INVITABLE_ROLES).optional(),
+  allowGuests: z.boolean().optional(),
+});
+export const displayName = z.string().trim().min(1, 'Please enter your name').max(50);
+export const guestJoinBody = z.object({ name: displayName });
+export const updateMeBody = z.object({ name: displayName });
 export const versionBody = z.object({ label: z.string().trim().min(1).max(200) });
 
 export const commentBody = z.object({
@@ -61,8 +71,11 @@ export const resolveBody = z.object({ resolved: z.boolean() });
 export interface Me {
   id: string;
   name: string;
+  /** Empty for guests. */
   email: string;
   image: string | null;
+  /** Joined through a share link without an account. */
+  isGuest: boolean;
 }
 
 export interface ProjectSummary {
@@ -78,9 +91,11 @@ export interface ProjectSummary {
 export interface Member {
   userId: string;
   name: string;
-  email: string;
+  /** Hidden (null) for guests and when the viewer is a guest. */
+  email: string | null;
   image: string | null;
   role: Role;
+  isGuest: boolean;
 }
 
 export interface PendingInvite {
@@ -94,6 +109,9 @@ export interface ShareLink {
   id: string;
   token: string;
   role: InvitableRole;
+  allowGuests: boolean;
+  /** Guests currently in the project who joined with this link. */
+  guestCount: number;
   createdAt: string;
 }
 
@@ -111,7 +129,9 @@ export interface InvitePreview {
   projectName: string;
   role: InvitableRole;
   invitedBy: string;
-  alreadyMember: boolean;
+  allowGuests: boolean;
+  /** Null when nobody is signed in. */
+  viewer: { name: string; isGuest: boolean; alreadyMember: boolean } | null;
 }
 
 export interface AppConfig {
