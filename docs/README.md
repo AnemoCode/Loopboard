@@ -22,8 +22,11 @@ A browser-based, real-time collaborative editor for **causal loop diagrams (CLDs
 | 12 | [Testing & Quality](12-testing-and-quality.md) | Test strategy, fixtures, performance budgets |
 | 13 | [Roadmap](13-roadmap.md) | Phased delivery plan with tasks and acceptance criteria |
 | 14 | [Risks & Open Questions](14-risks-and-open-questions.md) | What could go wrong, and the decisions still open |
+| 15 | [Implementation Notes](15-implementation-notes.md) | **What was actually built**, deviations from this plan and why, test coverage |
 
-## TL;DR of the key decisions
+> **Status:** implemented. Docs 01–14 are the original plan; [15 — Implementation Notes](15-implementation-notes.md) describes the code as built, including where it intentionally differs (single server process, cookie-authenticated WebSocket, client-side exports, no Redis/MinIO).
+
+## TL;DR of the key decisions (original plan)
 
 - **Monorepo:** pnpm workspaces + Turborepo, all TypeScript.
 - **Frontend:** React 19 + Vite, with a **custom SVG canvas engine**. Rendering lives in a pure `@cld/render` package, so screen output and exported files come from the same code. Styling uses Tailwind CSS v4 + shadcn/ui (Radix), and Zustand holds local UI state.

@@ -1,6 +1,8 @@
 # 07: Vensim MDL Format & Mapping
 
-Vensim `.mdl` is a text format with two parts: an **equations section** and a **sketch section**. Below is what we know from Vensim's documentation and from the fixture in this repo. Lines marked **(observed)** come from the fixture, and **(TBV)** means *to be verified* against more fixtures saved from Vensim PLE before we rely on it.
+Vensim `.mdl` is a text format with two parts: an **equations section** and a **sketch section**. Below is what we know from Vensim's documentation and from the fixtures in this repo.
+
+> **Update (implemented):** the second fixture (`servitization.mdl`) resolved several TBV items: loop shape `4` = clockwise, `5` = counter-clockwise; comment text follows when `bits & 4`; sizes are half extents; text colour lives in the font field. See [15](15-implementation-notes.md#vensim-format-resolved-questions). Lines marked **(observed)** come from the fixture, and **(TBV)** means *to be verified* against more fixtures saved from Vensim PLE before we rely on it.
 
 > **Fixture strategy:** before writing the codec, produce a fixture set in Vensim PLE (free): one file per feature (box/ellipse variables, colored text, every polarity type, delay marks, both loop directions, multiple views, shadow variables, comments with text, fonts). Store them in `packages/mdl/test/fixtures/` with a screenshot of each. Those screenshots become our visual-regression goldens.
 

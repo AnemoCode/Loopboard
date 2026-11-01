@@ -1,5 +1,7 @@
 # 13: Roadmap & Implementation Plan
 
+> **Status (2026-11-01):** Phases 0–4 are implemented, along with most of Phase 5 (loop analysis, templates, command palette). Not built yet: presentation mode, auto-layout, cursor chat, public anonymous links, i18n, @mention notifications, organisations/SSO. See [15](15-implementation-notes.md) for the as-built scope and deviations.
+
 Estimates are in **ideal person-weeks (pw)** for one experienced full-stack developer. With two developers, the frontend-engine and backend/infra tracks largely run in parallel. Each phase ends with a demoable, deployable build.
 
 ```
