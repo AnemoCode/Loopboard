@@ -873,6 +873,32 @@ export function editMessage(
   });
 }
 
+/** Move comment authorship from one user to another (a guest who created an account). */
+export function reassignCommentAuthor(
+  doc: Y.Doc,
+  from: string,
+  to: string,
+  origin?: unknown,
+): boolean {
+  let changed = false;
+  run(doc, origin, () => {
+    roots(doc).comments.forEach((t) => {
+      if (t.get('createdBy') === from) {
+        t.set('createdBy', to);
+        changed = true;
+      }
+      const arr = t.get('messages') as Y.Array<CommentMessage>;
+      arr.toArray().forEach((m, i) => {
+        if (m.authorId !== from) return;
+        arr.delete(i, 1);
+        arr.insert(i, [{ ...m, authorId: to }]);
+        changed = true;
+      });
+    });
+  });
+  return changed;
+}
+
 // ---------------------------------------------------------------- invariants
 
 /** Remove variables no node references any more. */
