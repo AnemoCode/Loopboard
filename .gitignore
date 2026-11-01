@@ -10,3 +10,4 @@ playwright-report/
 .vite/
 packages/render/test/__output__/
 test-results/
+.env.local
