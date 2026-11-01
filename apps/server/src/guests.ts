@@ -3,7 +3,7 @@ import { reassignCommentAuthor } from '@cld/model';
 import { atLeast, type Role } from '@cld/shared';
 import type { Collab } from './collab.js';
 import type { Db } from './db/index.js';
-import { projectMembers, projectVersions, session, user } from './db/schema.js';
+import { projectChanges, projectMembers, projectVersions, session, user } from './db/schema.js';
 
 /**
  * A guest created an account (or signed in to one): move their memberships, version authorship
@@ -36,6 +36,7 @@ export async function migrateGuest(
     .update(projectVersions)
     .set({ createdBy: to })
     .where(eq(projectVersions.createdBy, from));
+  await db.update(projectChanges).set({ userId: to }).where(eq(projectChanges.userId, from));
   for (const m of memberships) {
     await collab.withDocument(m.projectId, (doc) => void reassignCommentAuthor(doc, from, to));
   }

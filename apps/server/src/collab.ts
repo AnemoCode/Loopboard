@@ -4,6 +4,7 @@ import * as Y from 'yjs';
 import { initDoc, repairDoc, toSnapshot, type ProjectSnapshot } from '@cld/model';
 import { atLeast, docName, projectIdFromDoc, type Role } from '@cld/shared';
 import { getRole } from './access.js';
+import { attachChangelog } from './changelog.js';
 import type { Auth } from './auth.js';
 import type { Db } from './db/index.js';
 import { projectDocuments, projects, projectVersions } from './db/schema.js';
@@ -13,6 +14,8 @@ export interface CollabContext {
   name?: string;
   role?: Role;
   system?: boolean;
+  /** Marks a version restore so the changelog logs a single entry. */
+  restoreLabel?: string;
 }
 
 const MAX_DOC_BYTES = 20 * 1024 * 1024;
@@ -107,6 +110,18 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
       repairDoc(document);
       return document;
     },
+    async afterLoadDocument({ document, documentName }) {
+      const projectId = projectIdFromDoc(documentName);
+      if (!projectId) return;
+      // Tell connected clients to refresh their History panel after new entries are stored.
+      attachChangelog(
+        document,
+        projectId,
+        db,
+        () => document.broadcastStateless(JSON.stringify({ type: 'changes' })),
+        log,
+      );
+    },
     async onStoreDocument({ document, documentName, lastContext }) {
       const projectId = projectIdFromDoc(documentName);
       if (projectId) await storeState(projectId, document, lastContext?.userId ?? null);
@@ -114,8 +129,16 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
   });
 
   /** Apply a change to a project's live document (loads it if nobody has it open). */
-  async function withDocument(projectId: string, fn: (doc: Document) => void): Promise<void> {
-    const conn = await hocuspocus.openDirectConnection(docName(projectId), { system: true });
+  async function withDocument(
+    projectId: string,
+    fn: (doc: Document) => void,
+    actor?: Pick<CollabContext, 'userId' | 'name' | 'restoreLabel'>,
+  ): Promise<void> {
+    // The actor (if any) attributes the change in the changelog.
+    const conn = await hocuspocus.openDirectConnection(docName(projectId), {
+      system: true,
+      ...actor,
+    });
     try {
       await conn.transact(fn);
     } finally {
@@ -147,6 +170,13 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
     }
   }
 
+  /** Ask connected clients to refresh their History panel (e.g. after a version was saved). */
+  function notifyChanges(projectId: string) {
+    hocuspocus.documents
+      .get(docName(projectId))
+      ?.broadcastStateless(JSON.stringify({ type: 'changes' }));
+  }
+
   /** Close every connection of a project (deleted). */
   function closeProject(projectId: string) {
     hocuspocus.closeConnections(docName(projectId));
@@ -154,6 +184,7 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
 
   return {
     hocuspocus,
+    notifyChanges,
     withDocument,
     currentState,
     snapshot,
