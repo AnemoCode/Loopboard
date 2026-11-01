@@ -8,7 +8,10 @@ services:
       POSTGRES_PASSWORD: loopwise
       POSTGRES_DB: loopwise
     ports: ['5433:5432']
-    volumes: [dev_db:/var/lib/postgresql]
+    volumes:
+      - dev_db:/var/lib/postgresql
+      # Creates the database used by `pnpm test` on first start.
+      - ./docker/dev-db-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U loopwise']
       interval: 2s
