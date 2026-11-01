@@ -6,13 +6,7 @@
     <meta name="description" content="Draw causal loop diagrams together, in real time. Imports and exports Vensim .mdl files." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Loopwise</title>
-    <script>
-      try {
-        const t = localStorage.getItem('theme') || 'system';
-        const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.classList.toggle('dark', dark);
-      } catch {}
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
