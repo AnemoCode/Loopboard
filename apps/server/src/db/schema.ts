@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   boolean,
   customType,
   index,
@@ -31,6 +32,8 @@ export const user = pgTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
+  /** Guests who joined through a share link without an account (Better Auth anonymous plugin). */
+  isAnonymous: boolean('is_anonymous').notNull().default(false),
   ...timestamps,
 });
 
@@ -94,6 +97,10 @@ export const projectMembers = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     role: roleEnum('role').notNull(),
+    /** Share link used to join (lets owners remove the guests of a revoked link). */
+    inviteId: uuid('invite_id').references((): AnyPgColumn => projectInvites.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -113,6 +120,8 @@ export const projectInvites = pgTable(
     email: text('email'),
     token: text('token').unique(),
     role: roleEnum('role').notNull(),
+    /** Share links only: people can join as guests without an account. */
+    allowGuests: boolean('allow_guests').notNull().default(true),
     createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
