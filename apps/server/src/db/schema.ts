@@ -1,7 +1,9 @@
-import { sql } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
+  bigserial,
   boolean,
+  jsonb,
   customType,
   index,
   integer,
@@ -155,4 +157,23 @@ export const projectVersions = pgTable(
       .default(sql`now()`),
   },
   (t) => [index('project_versions_project_idx').on(t.projectId, t.createdAt)],
+);
+
+/** Changelog: who changed what, derived from document transactions (moves are merged). */
+export const projectChanges = pgTable(
+  'project_changes',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    userName: text('user_name').notNull(),
+    kind: text('kind').notNull(),
+    summary: text('summary').notNull(),
+    diagramId: text('diagram_id'),
+    elementIds: jsonb('element_ids').$type<string[]>().notNull().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('project_changes_project_idx').on(t.projectId, desc(t.id))],
 );
