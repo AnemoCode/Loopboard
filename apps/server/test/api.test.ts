@@ -8,6 +8,7 @@ import { parseMdl, writeMdl } from '@cld/mdl';
 import {
   addElement,
   addVariableNode,
+  deleteElements,
   moveElements,
   renameVariable,
   roots,
@@ -555,7 +556,10 @@ describe('guest access via share links', () => {
     expect(await db.select().from(userTable).where(eq(userTable.id, guestId))).toHaveLength(0);
     // Their changelog entries now belong to the account.
     const log = (await owner.req('GET', `/api/projects/${pid}/changes`)).json.changes;
-    expect(log.find((c: any) => c.summary.startsWith('commented'))).toMatchObject({ userId: me.id, userName: 'Vivi' });
+    expect(log.find((c: any) => c.summary.startsWith('commented'))).toMatchObject({
+      userId: me.id,
+      userName: 'Vivi',
+    });
     o.destroy();
   });
 
@@ -687,5 +691,171 @@ describe('changelog', () => {
     expect(p2.changes[0].id).toBeLessThan(p1.changes[2].id);
     l.destroy();
     m.destroy();
+  });
+});
+
+describe('undo from the history and autosaves', () => {
+  const owner = new User('Uma', 'uma@example.com');
+  const editor = new User('Ugo', 'ugo@example.com');
+  const watcher = new User('Vic', 'vic@example.com');
+  const LOCAL = { local: true };
+  let pid = '';
+
+  async function history() {
+    return (await owner.req('GET', `/api/projects/${pid}/changes`)).json.changes as any[];
+  }
+  async function waitFor(pred: (h: any[]) => boolean) {
+    const start = Date.now();
+    let h = await history();
+    while (!pred(h) && Date.now() - start < 5000) {
+      await wait(50);
+      h = await history();
+    }
+    return h;
+  }
+
+  it('undoes individual changes without touching later edits', async () => {
+    await owner.signUp();
+    await editor.signUp();
+    await watcher.signUp();
+    pid = (await owner.req('POST', '/api/projects', { name: 'Undoable' })).json.id;
+    await owner.req('POST', `/api/projects/${pid}/members`, {
+      email: 'ugo@example.com',
+      role: 'editor',
+    });
+    await owner.req('POST', `/api/projects/${pid}/members`, {
+      email: 'vic@example.com',
+      role: 'viewer',
+    });
+    const o = owner.connect(pid);
+    const e = editor.connect(pid);
+    await until(() => o.state.synced && e.state.synced);
+    const d = [...roots(e.doc).diagrams.keys()][0]!;
+    const layer = [...(roots(e.doc).diagrams.get(d)!.get('layers') as Y.Map<unknown>).keys()][0]!;
+    const a = addVariableNode(e.doc, d, { name: 'Births', x: 0, y: 0, layerId: layer }, LOCAL);
+    const b = addVariableNode(
+      e.doc,
+      d,
+      { name: 'Population', x: 300, y: 0, layerId: layer },
+      LOCAL,
+    );
+    const l = addElement(
+      e.doc,
+      d,
+      { type: 'link', layerId: layer, from: a, to: b, control: null, polarity: null },
+      LOCAL,
+    );
+    const vid = (toSnapshot(e.doc).diagrams[d]!.elements[a] as { variableId: string }).variableId;
+    renameVariable(e.doc, vid, 'Birth rate', LOCAL);
+    let h = await waitFor((x) => x.some((c) => c.summary.startsWith('renamed')));
+    const rename = h.find((c) => c.summary === 'renamed “Births” to “Birth rate”');
+    expect(rename).toMatchObject({ undoable: true, undoneByName: null });
+
+    // Viewers can't undo; editors can.
+    expect(
+      (await watcher.req('POST', `/api/projects/${pid}/changes/${rename.id}/undo`)).status,
+    ).toBe(403);
+    expect(
+      (await owner.req('POST', `/api/projects/${pid}/changes/${rename.id}/undo`)).json,
+    ).toEqual({ applied: 1, skipped: 0 });
+    await until(() => toSnapshot(e.doc).variables[vid]!.name === 'Births');
+    h = await waitFor((x) => x[0]?.summary.startsWith('undid'));
+    expect(h[0]).toMatchObject({
+      userName: 'Uma',
+      kind: 'undo',
+      summary: 'undid: renamed “Births” to “Birth rate”',
+      undoable: true,
+    });
+    expect(h.find((c) => c.id === rename.id)).toMatchObject({
+      undoable: false,
+      undoneByName: 'Uma',
+    });
+    expect((await owner.req('POST', `/api/projects/${pid}/changes/${rename.id}/undo`)).status).toBe(
+      409,
+    );
+    // Undoing the undo redoes the change.
+    expect(
+      (await owner.req('POST', `/api/projects/${pid}/changes/${h[0].id}/undo`)).json.applied,
+    ).toBe(1);
+    await until(() => toSnapshot(e.doc).variables[vid]!.name === 'Birth rate');
+
+    // A change that was overwritten later is left alone.
+    updateElement(e.doc, d, l, { polarity: '+' }, LOCAL);
+    h = await waitFor((x) => x.some((c) => c.summary.includes('to +')));
+    const pol = h.find((c) => c.summary.includes('to +'));
+    updateElement(o.doc, d, l, { polarity: '-' }, LOCAL);
+    await until(() => (toSnapshot(e.doc).diagrams[d]!.elements[l] as any).polarity === '-');
+    expect((await owner.req('POST', `/api/projects/${pid}/changes/${pol.id}/undo`)).json).toEqual({
+      applied: 0,
+      skipped: 1,
+    });
+    expect((await history()).find((c) => c.id === pol.id).undoable).toBe(true);
+
+    // Grouped moves are undone together.
+    moveElements(e.doc, d, [{ id: a, dx: 40, dy: 0 }], LOCAL);
+    moveElements(e.doc, d, [{ id: b, dx: 0, dy: 40 }], LOCAL);
+    h = await waitFor((x) => x[0]?.summary === 'rearranged 2 elements');
+    await owner.req('POST', `/api/projects/${pid}/changes/${h[0].id}/undo`);
+    await until(() => {
+      const els = toSnapshot(e.doc).diagrams[d]!.elements as any;
+      return els[a].x === 0 && els[b].y === 0;
+    });
+
+    // Deleting a variable (with its link) is undone in one go.
+    deleteElements(e.doc, d, [a], LOCAL);
+    h = await waitFor((x) => x[0]?.summary.startsWith('deleted variable'));
+    expect(h[0].summary).toBe('deleted variable “Birth rate” and 1 attached link');
+    await owner.req('POST', `/api/projects/${pid}/changes/${h[0].id}/undo`);
+    await until(() => {
+      const s = toSnapshot(e.doc);
+      return (
+        !!s.diagrams[d]!.elements[a] &&
+        !!s.diagrams[d]!.elements[l] &&
+        s.variables[vid]?.name === 'Birth rate'
+      );
+    });
+    o.destroy();
+    e.destroy();
+  });
+
+  it('autosaves a version every interval while people edit, including the last edits', async () => {
+    const { app } = await buildApp({ ...env, AUTOSAVE_INTERVAL_MS: 1500 }, db);
+    await app.listen({ port: 0, host: '127.0.0.1' });
+    const port = (app.server.address() as { port: number }).port;
+    const saved = base;
+    base = `http://127.0.0.1:${port}`;
+    try {
+      const p2 = (await owner.req('POST', '/api/projects', { name: 'Autosaved' })).json.id;
+      const c = owner.connect(p2);
+      await until(() => c.state.synced);
+      const d = [...roots(c.doc).diagrams.keys()][0]!;
+      const layer = [...(roots(c.doc).diagrams.get(d)!.get('layers') as Y.Map<unknown>).keys()][0]!;
+      const autos = async () =>
+        (await owner.req('GET', `/api/projects/${p2}/versions`)).json.filter(
+          (v: any) => v.kind === 'auto',
+        ).length;
+      addVariableNode(c.doc, d, { name: 'First', x: 0, y: 0, layerId: layer }, LOCAL);
+      await until(() => true);
+      const start = Date.now();
+      while ((await autos()) < 1 && Date.now() - start < 8000) await wait(100);
+      expect(await autos()).toBe(1);
+      // An edit right after the autosave: covered by a trailing autosave once the interval is up.
+      addVariableNode(c.doc, d, { name: 'Second', x: 100, y: 0, layerId: layer }, LOCAL);
+      const s2 = Date.now();
+      while ((await autos()) < 2 && Date.now() - s2 < 8000) await wait(100);
+      expect(await autos()).toBe(2);
+      const latest = (await owner.req('GET', `/api/projects/${p2}/versions`)).json[0];
+      const snap = (await owner.req('GET', `/api/projects/${p2}/versions/${latest.id}/snapshot`))
+        .json;
+      expect(
+        Object.values(snap.variables)
+          .map((v: any) => v.name)
+          .sort(),
+      ).toEqual(['First', 'Second']);
+      c.destroy();
+    } finally {
+      base = saved;
+      await app.close();
+    }
   });
 });

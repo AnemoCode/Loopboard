@@ -1,6 +1,13 @@
 import { isTransactionOrigin, type Document } from '@hocuspocus/server';
 import { desc, eq } from 'drizzle-orm';
-import { describeChanges, layoutSummary, toSnapshot, type ChangeEntry } from '@cld/model';
+import {
+  describeChanges,
+  layoutSummary,
+  mergeOps,
+  toSnapshot,
+  type ChangeEntry,
+  type ChangeOp,
+} from '@cld/model';
 import type { Db } from './db/index.js';
 import { projectChanges } from './db/schema.js';
 
@@ -10,6 +17,8 @@ export interface Actor {
   name: string;
   /** Set when the transaction restores a version (logged as a single entry). */
   restoreLabel?: string;
+  /** Set when the transaction undoes a changelog entry (logged as a single entry). */
+  undoOf?: string;
 }
 
 function actorOf(origin: unknown): Actor | null {
@@ -20,18 +29,24 @@ function actorOf(origin: unknown): Actor | null {
       : origin.source === 'local'
         ? origin.context
         : null
-  ) as { userId?: string; name?: string; restoreLabel?: string } | null;
+  ) as { userId?: string; name?: string; restoreLabel?: string; undoOf?: string } | null;
   if (!ctx?.userId) return null; // server housekeeping (load, migration, repair)
   return {
     userId: ctx.userId,
     name: ctx.name ?? 'Someone',
     ...(ctx.restoreLabel ? { restoreLabel: ctx.restoreLabel } : {}),
+    ...(ctx.undoOf ? { undoOf: ctx.undoOf } : {}),
   };
 }
 
 /** Consecutive moves by the same person within this window become one "rearranged" entry. */
 const MERGE_WINDOW_MS = 10 * 60 * 1000;
 const MAX_IDS = 500;
+/** Undo data above this size isn't kept (the entry stays visible, just not undoable). */
+const MAX_REVERT_BYTES = 256 * 1024;
+
+const revertOf = (ops: ChangeOp[]): ChangeOp[] | null =>
+  ops.length && JSON.stringify(ops).length <= MAX_REVERT_BYTES ? ops : null;
 
 /**
  * Track changes of a loaded document: diff each attributed transaction against the previous state
@@ -54,10 +69,24 @@ export function attachChangelog(
     prev = next;
     const actor = actorOf(tr.origin);
     if (!actor) return;
-    const entries: ChangeEntry[] = actor.restoreLabel
-      ? [{ kind: 'restore', summary: `restored the version ${actor.restoreLabel}` }]
-      : describeChanges(before, next);
-    if (!entries.length) return;
+    let entries = describeChanges(before, next);
+    // A restore is always worth showing, even if it brought back identical content.
+    if (!entries.length && !actor.restoreLabel) return;
+    // Restores and undos are one action each; their combined ops make them undoable in turn.
+    if (actor.restoreLabel || actor.undoOf) {
+      const ops = entries.flatMap((e) => e.ops);
+      entries = [
+        actor.restoreLabel
+          ? { kind: 'restore', summary: `restored the version ${actor.restoreLabel}`, ops }
+          : {
+              kind: 'undo',
+              summary: `undid: ${actor.undoOf}`,
+              diagramId: entries.find((e) => e.diagramId)?.diagramId,
+              elementIds: entries.flatMap((e) => e.elementIds ?? []),
+              ops,
+            },
+      ];
+    }
     queue = queue
       .then(() => persist(db, projectId, actor, entries))
       .then(onWritten)
@@ -80,12 +109,18 @@ async function persist(db: Db, projectId: string, actor: Actor, entries: ChangeE
         last.userId === actor.userId &&
         last.diagramId === (e.diagramId ?? null) &&
         last.elementIds.length > 0 &&
+        !last.undoneAt &&
         Date.now() - last.createdAt.getTime() < MERGE_WINDOW_MS
       ) {
         const ids = [...new Set([...last.elementIds, ...e.elementIds])].slice(0, MAX_IDS);
         await db
           .update(projectChanges)
-          .set({ elementIds: ids, summary: layoutSummary(ids.length), createdAt: new Date() })
+          .set({
+            elementIds: ids,
+            summary: layoutSummary(ids.length),
+            revert: last.revert ? revertOf(mergeOps(last.revert, e.ops)) : null,
+            createdAt: new Date(),
+          })
           .where(eq(projectChanges.id, last.id));
         continue;
       }
@@ -98,6 +133,7 @@ async function persist(db: Db, projectId: string, actor: Actor, entries: ChangeE
       summary: e.summary,
       diagramId: e.diagramId ?? null,
       elementIds: (e.elementIds ?? []).slice(0, MAX_IDS),
+      revert: revertOf(e.ops),
     });
   }
 }

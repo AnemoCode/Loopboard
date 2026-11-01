@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import * as Y from 'yjs';
 import {
   byKey,
+  revertOps,
   initDoc,
   replaceContent,
   snapshotSchema,
@@ -15,6 +16,7 @@ import {
   updateProjectBody,
   versionBody,
   type ChangesPage,
+  type UndoResult,
   type ChangeSummary,
   type ProjectSummary,
   type VersionSummary,
@@ -209,6 +211,9 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
         diagramId: projectChanges.diagramId,
         elementIds: projectChanges.elementIds,
         createdAt: projectChanges.createdAt,
+        hasRevert: sql<boolean>`${projectChanges.revert} is not null`,
+        undoneByName: projectChanges.undoneByName,
+        undoneAt: projectChanges.undoneAt,
       })
       .from(projectChanges)
       .leftJoin(user, eq(user.id, projectChanges.userId))
@@ -221,13 +226,45 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
       .limit(limit + 1);
     const page = rows.slice(0, limit);
     return {
-      changes: page.map((r) => ({
+      changes: page.map(({ hasRevert, undoneAt, ...r }) => ({
         ...r,
         kind: r.kind as ChangeSummary['kind'],
         createdAt: r.createdAt.toISOString(),
+        undoable: hasRevert && !undoneAt,
       })),
       nextCursor: rows.length > limit ? page[page.length - 1]!.id : null,
     };
+  });
+
+  /** Undo one changelog entry (only the parts nobody changed again since). */
+  app.post('/api/projects/:id/changes/:changeId/undo', async (req): Promise<UndoResult> => {
+    const me = ctx.requireUser(req);
+    const id = idParam(req.params);
+    await ctx.requireRole(req, id, 'editor');
+    const changeId = Number((req.params as { changeId: string }).changeId);
+    if (!Number.isInteger(changeId)) throw new HttpError(404, 'Change not found');
+    const [change] = await db
+      .select()
+      .from(projectChanges)
+      .where(and(eq(projectChanges.id, changeId), eq(projectChanges.projectId, id)));
+    if (!change) throw new HttpError(404, 'Change not found');
+    if (change.undoneAt)
+      throw new HttpError(409, `${change.undoneByName ?? 'Someone'} already undid this change`);
+    if (!change.revert) throw new HttpError(400, "This change can't be undone");
+    let result: UndoResult = { applied: 0, skipped: 0 };
+    await collab.withDocument(id, (doc) => void (result = revertOps(doc, change.revert!)), {
+      userId: me.id,
+      name: me.name,
+      undoOf: change.summary,
+    });
+    if (result.applied > 0) {
+      await db
+        .update(projectChanges)
+        .set({ undoneBy: me.id, undoneByName: me.name, undoneAt: new Date() })
+        .where(eq(projectChanges.id, changeId));
+      collab.notifyChanges(id);
+    }
+    return result;
   });
 
   // ---- versions
@@ -305,15 +342,13 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
         : `from ${v?.createdAt.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) ?? 'earlier'}`;
     const current = await collab.currentState(id);
     if (current)
-      await db
-        .insert(projectVersions)
-        .values({
-          projectId: id,
-          state: current,
-          label: 'Before restore',
-          kind: 'restore',
-          createdBy: me.id,
-        });
+      await db.insert(projectVersions).values({
+        projectId: id,
+        state: current,
+        label: 'Before restore',
+        kind: 'restore',
+        createdBy: me.id,
+      });
     await collab.withDocument(id, (doc) => replaceContent(doc, snap, 'restore'), {
       userId: me.id,
       name: me.name,

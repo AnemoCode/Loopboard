@@ -53,7 +53,7 @@ export async function buildApp(env: Env, db: Db) {
   });
   const authHooks: AuthHooks = {};
   const auth = createAuth(env, db, authHooks);
-  const collab = createCollab(db, auth, app.log);
+  const collab = createCollab(db, auth, app.log, env.AUTOSAVE_INTERVAL_MS);
   authHooks.onGuestLinked = (guestId, userId) => migrateGuest(db, collab, guestId, userId);
   const publicOrigin = new URL(env.PUBLIC_URL).origin;
 
