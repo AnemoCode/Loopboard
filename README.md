@@ -22,6 +22,16 @@ open http://localhost:8080
 
 To serve on a real domain with automatic HTTPS, set `SITE_ADDRESS=your.domain`, `PUBLIC_URL=https://your.domain`, `HTTP_PORT=80` and `HTTPS_PORT=443` in `.env`.
 
+## Deployment (GitHub Actions)
+
+`.github/workflows/deploy.yml` runs CI, builds arm64 images to `ghcr.io/anemocode/loopwise-{server,web}` and deploys
+`docker-compose.prod.yml` over SSH to `/opt/loopwise` (secrets: `DEPLOY_SSH_KEY`, `SERVER_HOST`, `SERVER_USER`).
+
+1. Once, on the server: `cp /opt/loopwise/.env.example /opt/loopwise/.env` and fill it in (the first deploy copies
+   the example there and then stops, asking for `.env`).
+2. In Nginx Proxy Manager, add a proxy host for your domain → `http://<server>:18473` with **Websockets Support** on
+   (needed for live collaboration) and an SSL certificate. `PUBLIC_URL` must be exactly that `https://` domain.
+
 ## Development
 
 Requirements: Node 24, pnpm (via `corepack enable`), Docker.
