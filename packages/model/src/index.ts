@@ -5,3 +5,4 @@ export * from './geometry.js';
 export * from './commands.js';
 export * from './analysis.js';
 export * from './schema.js';
+export * from './changes.js';
