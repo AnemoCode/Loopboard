@@ -1,0 +1,153 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# Never run two deploys against the server at the same time; queue them instead.
+concurrency:
+  group: deploy-loopwise
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/anemocode/loopwise
+  APP_DIR: /opt/loopwise
+
+jobs:
+  ci:
+    name: Continuous Integration
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    # The server is arm64, so build natively on an ARM runner.
+    runs-on: ubuntu-24.04-arm
+    needs: ci
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.image-tag.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image tag
+        id: image-tag
+        run: echo "tag=sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push server image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          push: true
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-server:${{ steps.image-tag.outputs.tag }}
+            ${{ env.IMAGE_PREFIX }}-server:latest
+          cache-from: type=gha,scope=loopwise-server
+          cache-to: type=gha,mode=max,scope=loopwise-server
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-web:${{ steps.image-tag.outputs.tag }}
+            ${{ env.IMAGE_PREFIX }}-web:latest
+          cache-from: type=gha,scope=loopwise-web
+          cache-to: type=gha,mode=max,scope=loopwise-web
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy Compose file to server
+        run: |
+          # shellcheck disable=SC2029 # APP_DIR is meant to expand on the runner
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p $APP_DIR"
+          scp docker-compose.prod.yml \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$APP_DIR/docker-compose.prod.yml"
+          scp .env.prod.example \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$APP_DIR/.env.example"
+
+      - name: Deploy to server
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        # Unquoted heredoc on purpose: the variables expand on the runner.
+        run: |
+          # shellcheck disable=SC2087
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+            set -e
+            cd $APP_DIR
+            if [ ! -f .env ]; then
+              echo "::error::$APP_DIR/.env is missing. Create it from $APP_DIR/.env.example first."
+              exit 1
+            fi
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export IMAGE_TAG="$IMAGE_TAG"
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker logout ghcr.io
+            docker image prune -f
+          EOF
+
+      - name: Verify deployment
+        # Waits for the web container's healthcheck (GET /api/health through Caddy, so it only passes once
+        # the server is up and its migrations have run); fails the job with the logs otherwise.
+        env:
+          APP_DIR: ${{ env.APP_DIR }}
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} APP_DIR="$APP_DIR" bash -s << 'EOF'
+            cd "$APP_DIR"
+            container="$(docker compose -f docker-compose.prod.yml ps -q web)"
+            if [ -z "$container" ]; then
+              echo "::error::No running web container found"
+              docker compose -f docker-compose.prod.yml ps -a
+              exit 1
+            fi
+            for attempt in $(seq 1 30); do
+              status="$(docker inspect --format '{{.State.Health.Status}}' "$container" 2>/dev/null || echo missing)"
+              echo "Attempt $attempt: web is $status"
+              if [ "$status" = "healthy" ]; then
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "::error::Loopwise did not become healthy"
+            docker compose -f docker-compose.prod.yml ps -a
+            docker compose -f docker-compose.prod.yml logs --tail 100 server web
+            exit 1
+          EOF

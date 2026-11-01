@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets deploy.yml run CI before building images.
+  workflow_call:
 
 jobs:
   check:
