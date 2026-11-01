@@ -12,7 +12,7 @@ export interface Session {
   doc: Y.Doc;
   provider: HocuspocusProvider;
   undo: Y.UndoManager;
-  user: { id: string; name: string; color: string };
+  user: { id: string; name: string; color: string; guest?: boolean };
   status: SyncStatus;
   /** True once the first sync completed. */
   ready: boolean;
@@ -34,7 +34,12 @@ export function createSession(projectId: string, me: Me): Session {
   const session: Session = {
     doc,
     undo,
-    user: { id: me.id, name: me.name, color: colorForUser(me.id) },
+    user: {
+      id: me.id,
+      name: me.name,
+      color: colorForUser(me.id),
+      ...(me.isGuest ? { guest: true } : {}),
+    },
     status: 'connecting',
     ready: false,
     readOnly: true,

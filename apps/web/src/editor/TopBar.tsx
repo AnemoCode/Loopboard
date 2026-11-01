@@ -201,7 +201,9 @@ export function TopBar({ peers }: { peers: Peer[] }) {
 }
 
 function ProjectTitle() {
-  const { projectId, projectName, canEdit } = useEditorCtx();
+  const { projectId, projectName, canEdit: canEditDoc, isGuest } = useEditorCtx();
+  // Renaming the project needs an account.
+  const canEdit = canEditDoc && !isGuest;
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(projectName);
@@ -437,7 +439,7 @@ function Presence({ peers }: { peers: Peer[] }) {
         return (
           <Tooltip
             key={p.user.id}
-            content={`${p.user.name}${diagramName ? ` · ${diagramName}` : ''} — ${following ? 'click to stop following' : 'click to follow'}`}
+            content={`${p.user.name}${p.user.guest ? ' (guest)' : ''}${diagramName ? ` · ${diagramName}` : ''} — ${following ? 'click to stop following' : 'click to follow'}`}
           >
             <button
               aria-label={`${following ? 'Stop following' : 'Follow'} ${p.user.name}`}

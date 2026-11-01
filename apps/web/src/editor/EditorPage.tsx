@@ -96,6 +96,14 @@ function EditorWithSession({
     );
   }, [session]);
 
+  // Keep the presence name in sync when the user renames themselves.
+  const me = useMe().data;
+  useEffect(() => {
+    if (!me || me.name === session.user.name) return;
+    session.user.name = me.name;
+    createPresencePublisher(session)({ user: { ...session.user } }, true);
+  }, [me, session]);
+
   const ctx: EditorCtx = useMemo(
     () => ({
       projectId,
@@ -105,6 +113,7 @@ function EditorWithSession({
       store,
       canEdit: ready && !readOnly && atLeast(role, 'editor'),
       canComment: atLeast(role, 'commenter'),
+      isGuest: !!session.user.guest,
     }),
     [projectId, projectName, role, session, store, ready, readOnly],
   );

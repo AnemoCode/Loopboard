@@ -12,6 +12,8 @@ export interface EditorCtx {
   /** Server-confirmed write access (false while read-only or before sync). */
   canEdit: boolean;
   canComment: boolean;
+  /** Joined through a share link without an account. */
+  isGuest: boolean;
 }
 
 export const EditorContext = createContext<EditorCtx | null>(null);

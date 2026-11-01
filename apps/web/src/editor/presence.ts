@@ -4,7 +4,7 @@ import type { Session } from './session';
 import type { Gesture } from './store';
 
 export interface Presence {
-  user: { id: string; name: string; color: string };
+  user: { id: string; name: string; color: string; guest?: boolean };
   diagramId: string | null;
   cursor: Point | null;
   selection: string[];
