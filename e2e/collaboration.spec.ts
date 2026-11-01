@@ -149,7 +149,7 @@ test.describe('real-time collaboration', () => {
     const { token } = (await res.json()) as { token: string };
     await guest.page.goto(`/invite/${token}`);
     await expect(guest.page.getByText('Olga invited you')).toBeVisible();
-    await guest.page.getByRole('button', { name: 'Join project' }).click();
+    await guest.page.getByRole('button', { name: 'Join as Gus' }).click();
     await expect(guest.page).toHaveURL(new RegExp(`/p/${id}`));
     await expect(guest.page.getByRole('button', { name: 'Variable' })).toBeVisible();
     await owner.context.close();
