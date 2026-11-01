@@ -27,9 +27,27 @@ export function UserMenu() {
         </div>
         <MenuSeparator />
         <MenuLabel>Theme</MenuLabel>
-        <MenuItem icon={<Sun className="size-4" />} checked={theme === 'light'} onSelect={() => setThemePref('light')}>Light</MenuItem>
-        <MenuItem icon={<Moon className="size-4" />} checked={theme === 'dark'} onSelect={() => setThemePref('dark')}>Dark</MenuItem>
-        <MenuItem icon={<Monitor className="size-4" />} checked={theme === 'system'} onSelect={() => setThemePref('system')}>System</MenuItem>
+        <MenuItem
+          icon={<Sun className="size-4" />}
+          checked={theme === 'light'}
+          onSelect={() => setThemePref('light')}
+        >
+          Light
+        </MenuItem>
+        <MenuItem
+          icon={<Moon className="size-4" />}
+          checked={theme === 'dark'}
+          onSelect={() => setThemePref('dark')}
+        >
+          Dark
+        </MenuItem>
+        <MenuItem
+          icon={<Monitor className="size-4" />}
+          checked={theme === 'system'}
+          onSelect={() => setThemePref('system')}
+        >
+          System
+        </MenuItem>
         <MenuSeparator />
         <MenuItem
           icon={<LogOut className="size-4" />}

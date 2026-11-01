@@ -40,12 +40,24 @@
   color-scheme: dark;
 }
 
-@utility bg-app { background-color: var(--bg); }
-@utility bg-surface { background-color: var(--surface); }
-@utility bg-surface-2 { background-color: var(--surface-2); }
-@utility border-app { border-color: var(--border); }
-@utility text-app { color: var(--text); }
-@utility text-muted { color: var(--muted); }
+@utility bg-app {
+  background-color: var(--bg);
+}
+@utility bg-surface {
+  background-color: var(--surface);
+}
+@utility bg-surface-2 {
+  background-color: var(--surface-2);
+}
+@utility border-app {
+  border-color: var(--border);
+}
+@utility text-app {
+  color: var(--text);
+}
+@utility text-muted {
+  color: var(--muted);
+}
 
 html,
 body,
@@ -69,7 +81,15 @@ body {
   }
 }
 @keyframes pop-in {
-  from { opacity: 0; transform: translateY(4px) scale(0.98); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-.animate-pop { animation: pop-in 140ms ease-out; }
+.animate-pop {
+  animation: pop-in 140ms ease-out;
+}

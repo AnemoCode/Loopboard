@@ -29,8 +29,13 @@ export async function readDiagramFile(file: File): Promise<LoadedFile> {
     const wrapper = data as { format?: string; project?: { name?: string }; doc?: unknown };
     if (wrapper.format !== 'cld') throw new Error('This JSON file is not a Loopwise diagram.');
     const parsed = snapshotSchema.safeParse(wrapper.doc);
-    if (!parsed.success) throw new Error('This diagram file is damaged or from an incompatible version.');
-    return { name: wrapper.project?.name || base, snapshot: parsed.data as ProjectSnapshot, warnings: [] };
+    if (!parsed.success)
+      throw new Error('This diagram file is damaged or from an incompatible version.');
+    return {
+      name: wrapper.project?.name || base,
+      snapshot: parsed.data as ProjectSnapshot,
+      warnings: [],
+    };
   }
   throw new Error('Unsupported file type. Choose a Vensim .mdl or a Loopwise .cld.json file.');
 }

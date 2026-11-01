@@ -1,5 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Copy, FileUp, FolderOpen, LogOut, MoreHorizontal, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
+import {
+  Copy,
+  FileUp,
+  FolderOpen,
+  LogOut,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+} from 'lucide-react';
 import { useRef, useState, type DragEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -7,7 +18,20 @@ import { emptySnapshot } from '@cld/model';
 import { ROLE_LABELS, type ProjectSummary } from '@cld/shared';
 import { Logo } from '../components/Logo';
 import { UserMenu } from '../components/UserMenu';
-import { Button, cx, Dialog, EmptyState, Field, Input, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, Spinner } from '../components/ui';
+import {
+  Button,
+  cx,
+  Dialog,
+  EmptyState,
+  Field,
+  Input,
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuSeparator,
+  MenuTrigger,
+  Spinner,
+} from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { ACCEPTED_FILES, readDiagramFile } from '../lib/files';
 import { keys, useMe, useProjects } from '../lib/queries';
@@ -38,9 +62,14 @@ export function DashboardPage() {
       let lastId = '';
       for (const file of list) {
         const loaded = await readDiagramFile(file);
-        const { id } = await api<{ id: string }>('/projects', { body: { name: loaded.name, snapshot: loaded.snapshot } });
+        const { id } = await api<{ id: string }>('/projects', {
+          body: { name: loaded.name, snapshot: loaded.snapshot },
+        });
         lastId = id;
-        if (loaded.warnings.length) toast.warning(`${file.name}: ${loaded.warnings.length} note(s) while importing`, { description: loaded.warnings.slice(0, 3).join(' ') });
+        if (loaded.warnings.length)
+          toast.warning(`${file.name}: ${loaded.warnings.length} note(s) while importing`, {
+            description: loaded.warnings.slice(0, 3).join(' '),
+          });
       }
       await refresh();
       if (list.length === 1) navigate(`/p/${lastId}`);
@@ -87,7 +116,9 @@ export function DashboardPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-app">Projects</h1>
-            <p className="mt-1 text-sm text-muted">Hi {me.name.split(' ')[0]}, pick up where you left off or start something new.</p>
+            <p className="mt-1 text-sm text-muted">
+              Hi {me.name.split(' ')[0]}, pick up where you left off or start something new.
+            </p>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => fileInput.current?.click()} loading={importing}>
@@ -113,14 +144,23 @@ export function DashboardPage() {
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1 sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <Input aria-label="Search projects" placeholder="Search projects" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-9" />
+            <Input
+              aria-label="Search projects"
+              placeholder="Search projects"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
           <div className="inline-flex rounded-lg bg-surface-2 p-0.5">
             {(['all', 'mine', 'shared'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={cx('rounded-md px-3 py-1 text-sm font-medium', filter === f ? 'bg-surface text-app shadow-sm' : 'text-muted hover:text-app')}
+                className={cx(
+                  'rounded-md px-3 py-1 text-sm font-medium',
+                  filter === f ? 'bg-surface text-app shadow-sm' : 'text-muted hover:text-app',
+                )}
               >
                 {f === 'all' ? 'All' : f === 'mine' ? 'Owned by me' : 'Shared with me'}
               </button>
@@ -153,13 +193,20 @@ export function DashboardPage() {
                   </>
                 }
               >
-                Create a causal loop diagram from scratch or a system archetype, or drop a Vensim .mdl file anywhere on this page.
+                Create a causal loop diagram from scratch or a system archetype, or drop a Vensim
+                .mdl file anywhere on this page.
               </EmptyState>
             )
           ) : (
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visible.map((p) => (
-                <ProjectCard key={p.id} project={p} onRename={() => setRenaming(p)} onDelete={() => setDeleting(p)} onChanged={refresh} />
+                <ProjectCard
+                  key={p.id}
+                  project={p}
+                  onRename={() => setRenaming(p)}
+                  onDelete={() => setDeleting(p)}
+                  onChanged={refresh}
+                />
               ))}
             </ul>
           )}
@@ -168,24 +215,47 @@ export function DashboardPage() {
 
       {dragOver && (
         <div className="pointer-events-none fixed inset-4 z-30 flex items-center justify-center rounded-3xl border-2 border-dashed border-accent-500 bg-accent-50/80 dark:bg-accent-500/10">
-          <p className="text-lg font-medium text-accent-700 dark:text-accent-300">Drop .mdl or .cld.json files to import</p>
+          <p className="text-lg font-medium text-accent-700 dark:text-accent-300">
+            Drop .mdl or .cld.json files to import
+          </p>
         </div>
       )}
 
       <NewProjectDialog open={creating} onOpenChange={setCreating} />
-      {renaming && <RenameDialog project={renaming} onClose={() => setRenaming(null)} onDone={refresh} />}
-      {deleting && <DeleteDialog project={deleting} onClose={() => setDeleting(null)} onDone={refresh} myId={me.id} />}
+      {renaming && (
+        <RenameDialog project={renaming} onClose={() => setRenaming(null)} onDone={refresh} />
+      )}
+      {deleting && (
+        <DeleteDialog
+          project={deleting}
+          onClose={() => setDeleting(null)}
+          onDone={refresh}
+          myId={me.id}
+        />
+      )}
     </div>
   );
 }
 
-function ProjectCard({ project: p, onRename, onDelete, onChanged }: { project: ProjectSummary; onRename: () => void; onDelete: () => void; onChanged: () => void }) {
+function ProjectCard({
+  project: p,
+  onRename,
+  onDelete,
+  onChanged,
+}: {
+  project: ProjectSummary;
+  onRename: () => void;
+  onDelete: () => void;
+  onChanged: () => void;
+}) {
   const navigate = useNavigate();
   const duplicate = async () => {
     try {
       const { id } = await api<{ id: string }>(`/projects/${p.id}/duplicate`, { method: 'POST' });
       onChanged();
-      toast.success('Project duplicated', { action: { label: 'Open', onClick: () => navigate(`/p/${id}`) } });
+      toast.success('Project duplicated', {
+        action: { label: 'Open', onClick: () => navigate(`/p/${id}`) },
+      });
     } catch (e) {
       toast.error(errorMessage(e));
     }
@@ -222,19 +292,39 @@ function ProjectCard({ project: p, onRename, onDelete, onChanged }: { project: P
       <div className="absolute bottom-3 right-2">
         <Menu>
           <MenuTrigger asChild>
-            <button aria-label={`Actions for ${p.name}`} className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-app">
+            <button
+              aria-label={`Actions for ${p.name}`}
+              className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-app"
+            >
               <MoreHorizontal className="size-4" />
             </button>
           </MenuTrigger>
           <MenuContent>
-            <MenuItem icon={<FolderOpen className="size-4" />} onSelect={() => navigate(`/p/${p.id}`)}>Open</MenuItem>
-            <MenuItem icon={<Pencil className="size-4" />} disabled={p.role === 'viewer' || p.role === 'commenter'} onSelect={onRename}>Rename</MenuItem>
-            <MenuItem icon={<Copy className="size-4" />} onSelect={duplicate}>Duplicate</MenuItem>
+            <MenuItem
+              icon={<FolderOpen className="size-4" />}
+              onSelect={() => navigate(`/p/${p.id}`)}
+            >
+              Open
+            </MenuItem>
+            <MenuItem
+              icon={<Pencil className="size-4" />}
+              disabled={p.role === 'viewer' || p.role === 'commenter'}
+              onSelect={onRename}
+            >
+              Rename
+            </MenuItem>
+            <MenuItem icon={<Copy className="size-4" />} onSelect={duplicate}>
+              Duplicate
+            </MenuItem>
             <MenuSeparator />
             {p.role === 'owner' ? (
-              <MenuItem icon={<Trash2 className="size-4" />} danger onSelect={onDelete}>Delete</MenuItem>
+              <MenuItem icon={<Trash2 className="size-4" />} danger onSelect={onDelete}>
+                Delete
+              </MenuItem>
             ) : (
-              <MenuItem icon={<LogOut className="size-4" />} danger onSelect={onDelete}>Leave project</MenuItem>
+              <MenuItem icon={<LogOut className="size-4" />} danger onSelect={onDelete}>
+                Leave project
+              </MenuItem>
             )}
           </MenuContent>
         </Menu>
@@ -243,7 +333,13 @@ function ProjectCard({ project: p, onRename, onDelete, onChanged }: { project: P
   );
 }
 
-function NewProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+function NewProjectDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const [name, setName] = useState('');
   const [template, setTemplate] = useState('blank');
   const [busy, setBusy] = useState(false);
@@ -253,7 +349,9 @@ function NewProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
     try {
       const t = TEMPLATES.find((x) => x.id === template);
       const snapshot = t ? t.build() : emptySnapshot();
-      const { id } = await api<{ id: string }>('/projects', { body: { name: name.trim() || t?.name || 'Untitled diagram', snapshot } });
+      const { id } = await api<{ id: string }>('/projects', {
+        body: { name: name.trim() || t?.name || 'Untitled diagram', snapshot },
+      });
       onOpenChange(false);
       navigate(`/p/${id}`);
     } catch (e) {
@@ -285,19 +383,30 @@ function NewProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
         className="space-y-5"
       >
         <Field label="Name">
-          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Coffee agroforestry" maxLength={200} />
+          <Input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Coffee agroforestry"
+            maxLength={200}
+          />
         </Field>
         <div>
           <div className="mb-2 text-xs font-medium text-muted">Start from</div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {[{ id: 'blank', name: 'Blank diagram', description: 'An empty canvas.' }, ...TEMPLATES].map((t) => (
+            {[
+              { id: 'blank', name: 'Blank diagram', description: 'An empty canvas.' },
+              ...TEMPLATES,
+            ].map((t) => (
               <button
                 type="button"
                 key={t.id}
                 onClick={() => setTemplate(t.id)}
                 className={cx(
                   'rounded-xl border p-3 text-left transition-colors',
-                  template === t.id ? 'border-accent-500 bg-accent-50 dark:bg-accent-500/10' : 'border-app hover:bg-surface-2',
+                  template === t.id
+                    ? 'border-accent-500 bg-accent-50 dark:bg-accent-500/10'
+                    : 'border-app hover:bg-surface-2',
                 )}
               >
                 <div className="text-sm font-medium text-app">{t.name}</div>
@@ -311,7 +420,15 @@ function NewProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   );
 }
 
-function RenameDialog({ project, onClose, onDone }: { project: ProjectSummary; onClose: () => void; onDone: () => void }) {
+function RenameDialog({
+  project,
+  onClose,
+  onDone,
+}: {
+  project: ProjectSummary;
+  onClose: () => void;
+  onDone: () => void;
+}) {
   const [name, setName] = useState(project.name);
   const [busy, setBusy] = useState(false);
   const save = async () => {
@@ -347,13 +464,29 @@ function RenameDialog({ project, onClose, onDone }: { project: ProjectSummary; o
           void save();
         }}
       >
-        <Input autoFocus aria-label="Project name" value={name} onChange={(e) => setName(e.target.value)} maxLength={200} />
+        <Input
+          autoFocus
+          aria-label="Project name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={200}
+        />
       </form>
     </Dialog>
   );
 }
 
-function DeleteDialog({ project, onClose, onDone, myId }: { project: ProjectSummary; onClose: () => void; onDone: () => void; myId: string }) {
+function DeleteDialog({
+  project,
+  onClose,
+  onDone,
+  myId,
+}: {
+  project: ProjectSummary;
+  onClose: () => void;
+  onDone: () => void;
+  myId: string;
+}) {
   const [busy, setBusy] = useState(false);
   const owner = project.role === 'owner';
   const run = async () => {

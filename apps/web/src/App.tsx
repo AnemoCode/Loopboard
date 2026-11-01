@@ -28,13 +28,21 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const me = useMe();
   const location = useLocation();
   if (me.isLoading) return <FullPageSpinner />;
-  if (!me.data) return <Navigate to={`/signin?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+  if (!me.data)
+    return (
+      <Navigate
+        to={`/signin?next=${encodeURIComponent(location.pathname + location.search)}`}
+        replace
+      />
+    );
   return <>{children}</>;
 }
 
 function Toasts() {
   const dark = useIsDark();
-  return <Toaster position="bottom-center" theme={dark ? 'dark' : 'light'} richColors closeButton />;
+  return (
+    <Toaster position="bottom-center" theme={dark ? 'dark' : 'light'} richColors closeButton />
+  );
 }
 
 export function App() {
@@ -45,8 +53,22 @@ export function App() {
           <Routes>
             <Route path="/signin" element={<AuthPage mode="signin" />} />
             <Route path="/signup" element={<AuthPage mode="signup" />} />
-            <Route path="/" element={<RequireAuth><DashboardPage /></RequireAuth>} />
-            <Route path="/invite/:token" element={<RequireAuth><InvitePage /></RequireAuth>} />
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <DashboardPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/invite/:token"
+              element={
+                <RequireAuth>
+                  <InvitePage />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/p/:projectId"
               element={

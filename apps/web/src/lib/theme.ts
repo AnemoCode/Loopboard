@@ -35,4 +35,5 @@ const subscribe = (l: () => void) => {
 };
 
 export const useThemePref = () => useSyncExternalStore(subscribe, read);
-export const useIsDark = () => useSyncExternalStore(subscribe, () => document.documentElement.classList.contains('dark'));
+export const useIsDark = () =>
+  useSyncExternalStore(subscribe, () => document.documentElement.classList.contains('dark'));

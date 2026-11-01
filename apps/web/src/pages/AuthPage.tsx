@@ -7,7 +7,8 @@ import { authClient } from '../lib/auth';
 import { keys, useConfig, useMe } from '../lib/queries';
 
 /** Only allow same-site relative redirects. */
-const safeNext = (next: string | null) => (next && next.startsWith('/') && !next.startsWith('//') ? next : '/');
+const safeNext = (next: string | null) =>
+  next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
 
 export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   const [params] = useSearchParams();
@@ -56,7 +57,9 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
           <h1 className="mt-4 text-2xl font-semibold tracking-tight text-app">
             {mode === 'signin' ? 'Welcome back' : 'Create your account'}
           </h1>
-          <p className="mt-1 text-sm text-muted">Draw causal loop diagrams together, in real time.</p>
+          <p className="mt-1 text-sm text-muted">
+            Draw causal loop diagrams together, in real time.
+          </p>
         </div>
         <div className="rounded-2xl border border-app bg-surface p-6 shadow-sm">
           {!!config.data?.socialProviders.length && (
@@ -78,7 +81,14 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
           <form onSubmit={submit} className="space-y-4">
             {mode === 'signup' && (
               <Field label="Name">
-                <Input autoFocus required autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ada Lovelace" />
+                <Input
+                  autoFocus
+                  required
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ada Lovelace"
+                />
               </Field>
             )}
             <Field label="Email">
@@ -103,7 +113,10 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
               />
             </Field>
             {error && (
-              <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+              <p
+                role="alert"
+                className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300"
+              >
                 {error}
               </p>
             )}
@@ -114,7 +127,10 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
         </div>
         <p className="mt-6 text-center text-sm text-muted">
           {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
-          <Link to={otherHref} className="font-medium text-accent-600 hover:underline dark:text-accent-300">
+          <Link
+            to={otherHref}
+            className="font-medium text-accent-600 hover:underline dark:text-accent-300"
+          >
             {mode === 'signin' ? 'Create an account' : 'Sign in'}
           </Link>
         </p>

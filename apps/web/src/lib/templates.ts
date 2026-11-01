@@ -1,5 +1,16 @@
 import * as Y from 'yjs';
-import { addElement, addVariableNode, controlFromBend, findLoops, freeSpotNear, initDoc, roots, toSnapshot, type Link, type ProjectSnapshot } from '@cld/model';
+import {
+  addElement,
+  addVariableNode,
+  controlFromBend,
+  findLoops,
+  freeSpotNear,
+  initDoc,
+  roots,
+  toSnapshot,
+  type Link,
+  type ProjectSnapshot,
+} from '@cld/model';
 
 interface Spec {
   nodes: Record<string, [name: string, x: number, y: number]>;
@@ -10,7 +21,9 @@ function build(spec: Spec): ProjectSnapshot {
   const doc = new Y.Doc();
   initDoc(doc);
   const diagramId = [...roots(doc).diagrams.keys()][0]!;
-  const layerId = [...(roots(doc).diagrams.get(diagramId)!.get('layers') as Y.Map<unknown>).keys()][0]!;
+  const layerId = [
+    ...(roots(doc).diagrams.get(diagramId)!.get('layers') as Y.Map<unknown>).keys(),
+  ][0]!;
   const ids: Record<string, string> = {};
   const pos: Record<string, { x: number; y: number }> = {};
   for (const [key, [name, x, y]] of Object.entries(spec.nodes)) {
@@ -19,7 +32,14 @@ function build(spec: Spec): ProjectSnapshot {
   }
   for (const [from, to, polarity, bend, delay] of spec.links) {
     const control = bend ? controlFromBend(pos[from]!, pos[to]!, { t: 0.5, s: bend }) : null;
-    const link: Omit<Link, 'id' | 'z'> = { type: 'link', layerId, from: ids[from]!, to: ids[to]!, polarity, control: control && { x: Math.round(control.x), y: Math.round(control.y) } };
+    const link: Omit<Link, 'id' | 'z'> = {
+      type: 'link',
+      layerId,
+      from: ids[from]!,
+      to: ids[to]!,
+      polarity,
+      control: control && { x: Math.round(control.x), y: Math.round(control.y) },
+    };
     if (delay) link.delay = true;
     addElement(doc, diagramId, link);
   }
@@ -29,7 +49,16 @@ function build(spec: Spec): ProjectSnapshot {
     if (loop.kind === '?') continue;
     const label = `${loop.kind}${++counts[loop.kind]}`;
     const at = freeSpotNear(toSnapshot(doc).diagrams[diagramId]!, loop.center);
-    addElement(doc, diagramId, { type: 'loop', layerId, x: at.x, y: at.y, r: 26, kind: loop.kind, label, direction: loop.direction });
+    addElement(doc, diagramId, {
+      type: 'loop',
+      layerId,
+      x: at.x,
+      y: at.y,
+      r: 26,
+      kind: loop.kind,
+      label,
+      direction: loop.direction,
+    });
   }
   return toSnapshot(doc);
 }
@@ -45,10 +74,15 @@ export const TEMPLATES: Template[] = [
   {
     id: 'fixes-that-fail',
     name: 'Fixes that Fail',
-    description: 'A quick fix relieves a symptom but its side effects make the problem worse later.',
+    description:
+      'A quick fix relieves a symptom but its side effects make the problem worse later.',
     build: () =>
       build({
-        nodes: { s: ['Problem symptom', 300, 300], f: ['Quick fix', 560, 300], u: ['Unintended consequences', 430, 520] },
+        nodes: {
+          s: ['Problem symptom', 300, 300],
+          f: ['Quick fix', 560, 300],
+          u: ['Unintended consequences', 430, 520],
+        },
         links: [
           ['s', 'f', '+', -0.25],
           ['f', 's', '-', -0.25],
@@ -63,7 +97,12 @@ export const TEMPLATES: Template[] = [
     description: 'Growth reinforces itself until a limiting condition slows it down.',
     build: () =>
       build({
-        nodes: { g: ['Growing action', 200, 320], p: ['Performance', 440, 320], s: ['Slowing action', 680, 320], l: ['Limiting condition', 680, 520] },
+        nodes: {
+          g: ['Growing action', 200, 320],
+          p: ['Performance', 440, 320],
+          s: ['Slowing action', 680, 320],
+          l: ['Limiting condition', 680, 520],
+        },
         links: [
           ['g', 'p', '+', -0.25],
           ['p', 'g', '+', -0.25],

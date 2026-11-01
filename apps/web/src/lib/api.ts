@@ -10,7 +10,10 @@ export class ApiError extends Error {
 }
 
 /** JSON fetch against our API; throws ApiError with the server's human-readable message. */
-export async function api<T = unknown>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T = unknown>(
+  path: string,
+  init: { method?: string; body?: unknown } = {},
+): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method: init.method ?? (init.body !== undefined ? 'POST' : 'GET'),
     credentials: 'same-origin',
@@ -26,4 +29,5 @@ export async function api<T = unknown>(path: string, init: { method?: string; bo
   return data as T;
 }
 
-export const errorMessage = (e: unknown): string => (e instanceof Error ? e.message : 'Something went wrong');
+export const errorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : 'Something went wrong';
