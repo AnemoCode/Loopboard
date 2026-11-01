@@ -41,6 +41,7 @@ import { timeAgo } from '../lib/time';
 export function DashboardPage() {
   const projects = useProjects();
   const me = useMe().data!;
+  const guest = me.isGuest;
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [query, setQuery] = useState('');
@@ -97,7 +98,7 @@ export function DashboardPage() {
     <div
       className="min-h-full"
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes('Files')) {
+        if (!guest && e.dataTransfer.types.includes('Files')) {
           e.preventDefault();
           setDragOver(true);
         }
@@ -117,10 +118,12 @@ export function DashboardPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-app">Projects</h1>
             <p className="mt-1 text-sm text-muted">
-              Hi {me.name.split(' ')[0]}, pick up where you left off or start something new.
+              {guest
+                ? `Hi ${me.name.split(' ')[0]}, these are the projects you joined as a guest.`
+                : `Hi ${me.name.split(' ')[0]}, pick up where you left off or start something new.`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className={cx('flex gap-2', guest && 'hidden')}>
             <Button onClick={() => fileInput.current?.click()} loading={importing}>
               <FileUp className="size-4" /> Import
             </Button>
@@ -175,6 +178,10 @@ export function DashboardPage() {
             </div>
           ) : projects.error ? (
             <p className="text-sm text-red-600">{errorMessage(projects.error)}</p>
+          ) : visible.length === 0 && guest ? (
+            <EmptyState icon={<FolderOpen className="size-5" />} title="No projects yet">
+              Open a share link to join a project.
+            </EmptyState>
           ) : visible.length === 0 ? (
             projects.data?.length ? (
               <EmptyState icon={<Search className="size-5" />} title="No matching projects" />
@@ -202,6 +209,7 @@ export function DashboardPage() {
               {visible.map((p) => (
                 <ProjectCard
                   key={p.id}
+                  guest={guest}
                   project={p}
                   onRename={() => setRenaming(p)}
                   onDelete={() => setDeleting(p)}
@@ -211,6 +219,20 @@ export function DashboardPage() {
             </ul>
           )}
         </div>
+        {guest && (
+          <div className="mt-8 flex flex-col items-start gap-4 rounded-2xl border border-accent-200 bg-accent-50 p-5 sm:flex-row sm:items-center dark:border-accent-500/30 dark:bg-accent-500/10">
+            <div className="flex-1">
+              <h2 className="font-medium text-app">Keep your projects</h2>
+              <p className="mt-1 text-sm text-muted">
+                Guest access lives in this browser only. Create a free account to keep these
+                projects on every device and start your own.
+              </p>
+            </div>
+            <Button variant="primary" onClick={() => navigate('/signup')}>
+              Create free account
+            </Button>
+          </div>
+        )}
       </main>
 
       {dragOver && (
@@ -239,11 +261,13 @@ export function DashboardPage() {
 
 function ProjectCard({
   project: p,
+  guest,
   onRename,
   onDelete,
   onChanged,
 }: {
   project: ProjectSummary;
+  guest: boolean;
   onRename: () => void;
   onDelete: () => void;
   onChanged: () => void;
@@ -308,12 +332,12 @@ function ProjectCard({
             </MenuItem>
             <MenuItem
               icon={<Pencil className="size-4" />}
-              disabled={p.role === 'viewer' || p.role === 'commenter'}
+              disabled={guest || p.role === 'viewer' || p.role === 'commenter'}
               onSelect={onRename}
             >
               Rename
             </MenuItem>
-            <MenuItem icon={<Copy className="size-4" />} onSelect={duplicate}>
+            <MenuItem icon={<Copy className="size-4" />} disabled={guest} onSelect={duplicate}>
               Duplicate
             </MenuItem>
             <MenuSeparator />

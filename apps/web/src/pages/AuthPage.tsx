@@ -1,10 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import { LogoMark } from '../components/Logo';
 import { Button, Field, Input } from '../components/ui';
 import { authClient } from '../lib/auth';
-import { keys, useConfig, useMe } from '../lib/queries';
+import { useConfig, useMe } from '../lib/queries';
 
 /** Only allow same-site relative redirects. */
 const safeNext = (next: string | null) =>
@@ -17,13 +18,15 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   const config = useConfig();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [name, setName] = useState('');
+  const guest = me.data?.isGuest ?? false;
+  const [name, setName] = useState(guest ? me.data!.name : '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (me.data) return <Navigate to={next} replace />;
+  // Guests may sign up / sign in: their projects and comments move to the account.
+  if (me.data && !guest) return <Navigate to={next} replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,7 +41,8 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
       setError(res.error.message ?? 'Something went wrong. Please try again.');
       return;
     }
-    await qc.invalidateQueries({ queryKey: keys.me });
+    await qc.invalidateQueries();
+    if (guest) toast.success('Your projects are now saved to your account.');
     navigate(next, { replace: true });
   };
 
@@ -55,10 +59,16 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
         <div className="mb-8 flex flex-col items-center text-center">
           <LogoMark size={44} />
           <h1 className="mt-4 text-2xl font-semibold tracking-tight text-app">
-            {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+            {guest
+              ? 'Keep your projects'
+              : mode === 'signin'
+                ? 'Welcome back'
+                : 'Create your account'}
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Draw causal loop diagrams together, in real time.
+            {guest
+              ? 'Your guest access only lives in this browser. With an account you keep your projects and comments on every device.'
+              : 'Draw causal loop diagrams together, in real time.'}
           </p>
         </div>
         <div className="rounded-2xl border border-app bg-surface p-6 shadow-sm">

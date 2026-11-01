@@ -61,14 +61,8 @@ export function App() {
                 </RequireAuth>
               }
             />
-            <Route
-              path="/invite/:token"
-              element={
-                <RequireAuth>
-                  <InvitePage />
-                </RequireAuth>
-              }
-            />
+            {/* Share links work without an account (guests join with a name). */}
+            <Route path="/invite/:token" element={<InvitePage />} />
             <Route
               path="/p/:projectId"
               element={
