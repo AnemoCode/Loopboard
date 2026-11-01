@@ -1,8 +1,21 @@
 import { expect, test } from '@playwright/test';
-import { addVariable, canvas, center, createProject, drawLink, dragBy, links, loops, signUp, variable } from './helpers';
+import {
+  addVariable,
+  canvas,
+  center,
+  createProject,
+  drawLink,
+  dragBy,
+  links,
+  loops,
+  signUp,
+  variable,
+} from './helpers';
 
 test.describe('single-user editing', () => {
-  test('builds a feedback loop with polarities, curves it, marks the loop and undoes', async ({ page }) => {
+  test('builds a feedback loop with polarities, curves it, marks the loop and undoes', async ({
+    page,
+  }) => {
     await signUp(page, 'Ada');
     await createProject(page, 'Population');
     await expect(page.getByText('This diagram is empty')).toBeVisible();
@@ -33,7 +46,9 @@ test.describe('single-user editing', () => {
     const handle = page.locator('[data-handle="curve"]');
     const dBefore = await links(page).last().locator('path').nth(1).getAttribute('d');
     await dragBy(page, await center(page, handle), 0, 80);
-    await expect.poll(() => links(page).last().locator('path').nth(1).getAttribute('d')).not.toBe(dBefore);
+    await expect
+      .poll(() => links(page).last().locator('path').nth(1).getAttribute('d'))
+      .not.toBe(dBefore);
     expect(await links(page).last().locator('path').nth(1).getAttribute('d')).toContain('A');
 
     // Loop analysis finds both loops; add markers from the panel.
@@ -52,7 +67,9 @@ test.describe('single-user editing', () => {
     await expect(loops(page)).toHaveCount(2);
   });
 
-  test('moves, renames, styles, deletes and uses layers, shapes, text and diagrams', async ({ page }) => {
+  test('moves, renames, styles, deletes and uses layers, shapes, text and diagrams', async ({
+    page,
+  }) => {
     await signUp(page, 'Grace');
     await createProject(page, 'Workshop');
     await addVariable(page, 'Trust', 500, 300);
@@ -67,21 +84,27 @@ test.describe('single-user editing', () => {
     await expect.poll(linkPath).not.toBe(before);
 
     // Rename by double-click.
-    await page.mouse.dblclick(...Object.values(await center(page, variable(page, 'Sales'))) as [number, number]);
+    await page.mouse.dblclick(
+      ...(Object.values(await center(page, variable(page, 'Sales'))) as [number, number]),
+    );
     const input = page.getByLabel('Variable name').first();
     await input.fill('Revenue');
     await input.press('Enter');
     await expect(variable(page, 'Revenue')).toHaveCount(1);
 
     // Duplicate names are rejected.
-    await page.mouse.dblclick(...Object.values(await center(page, variable(page, 'Revenue'))) as [number, number]);
+    await page.mouse.dblclick(
+      ...(Object.values(await center(page, variable(page, 'Revenue'))) as [number, number]),
+    );
     await page.getByLabel('Variable name').first().fill('trust');
     await page.getByLabel('Variable name').first().press('Enter');
     await expect(page.getByText('A variable called “trust” already exists')).toBeVisible();
     await expect(variable(page, 'Revenue')).toHaveCount(1);
 
     // Style: give the selected variable a box and a color.
-    await page.mouse.click(...Object.values(await center(page, variable(page, 'Revenue'))) as [number, number]);
+    await page.mouse.click(
+      ...(Object.values(await center(page, variable(page, 'Revenue'))) as [number, number]),
+    );
     await page.getByRole('tab', { name: 'Design' }).click();
     await page.getByRole('radio', { name: 'Box' }).click();
     await expect(variable(page, 'Revenue').locator('rect')).toHaveCount(2); // hit area + box
@@ -98,7 +121,9 @@ test.describe('single-user editing', () => {
     await page.mouse.click(box.x + 900, box.y + 600);
     await page.getByLabel('Text content').fill('Customer subsystem');
     await page.keyboard.press('ControlOrMeta+Enter');
-    await expect(page.locator('[data-type="text"]', { hasText: 'Customer subsystem' })).toHaveCount(1);
+    await expect(page.locator('[data-type="text"]', { hasText: 'Customer subsystem' })).toHaveCount(
+      1,
+    );
 
     // Layers: add a layer, draw on it, hide it.
     await page.getByRole('tab', { name: 'Layers' }).click();
@@ -110,14 +135,19 @@ test.describe('single-user editing', () => {
     await expect(variable(page, 'Hidden idea')).toHaveCount(1);
 
     // Delete a variable: its links go too.
-    await page.mouse.click(...Object.values(await center(page, variable(page, 'Trust'))) as [number, number]);
+    await page.mouse.click(
+      ...(Object.values(await center(page, variable(page, 'Trust'))) as [number, number]),
+    );
     await page.keyboard.press('Delete');
     await expect(variable(page, 'Trust')).toHaveCount(0);
     await expect(links(page)).toHaveCount(0);
 
     // Diagrams: add a second diagram and switch between them.
     await page.getByRole('button', { name: 'New diagram' }).click();
-    await expect(page.getByRole('tab', { name: 'Diagram 2' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Diagram 2' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await expect(page.getByText('This diagram is empty')).toBeVisible();
     await page.getByRole('tab', { name: 'Main' }).click();
     await expect(variable(page, 'Revenue')).toHaveCount(1);
@@ -147,7 +177,9 @@ test.describe('single-user editing', () => {
     await page.mouse.click(10, 500);
     await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.press('ControlOrMeta+d');
-    await expect(page.locator('[data-type="variable"] text', { hasText: '<Effort>' })).toHaveCount(1);
+    await expect(page.locator('[data-type="variable"] text', { hasText: '<Effort>' })).toHaveCount(
+      1,
+    );
     await expect(links(page)).toHaveCount(2);
 
     // Shortcuts dialog
@@ -170,4 +202,20 @@ test('loads without console errors or CSP violations', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+e');
   await expect(page.getByRole('dialog', { name: 'Export' })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('command palette finds variables across diagrams', async ({ page }) => {
+  await signUp(page, 'Pal');
+  await createProject(page, 'Palette');
+  await addVariable(page, 'Customer satisfaction', 400, 300);
+  await page.getByRole('button', { name: 'New diagram' }).click();
+  await expect(page.getByRole('tab', { name: 'Diagram 2' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByLabel('Search variables and commands').fill('satisf');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('tab', { name: 'Main' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByLabel('Variable name')).toHaveValue('Customer satisfaction');
 });

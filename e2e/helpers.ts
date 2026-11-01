@@ -2,7 +2,8 @@ import { expect, type Browser, type Page } from '@playwright/test';
 
 export const PASSWORD = 'correct-horse-battery';
 let counter = 0;
-export const uniqueEmail = (name: string) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, "")}-${Date.now()}-${counter++}@example.com`;
+export const uniqueEmail = (name: string) =>
+  `${name.toLowerCase().replace(/[^a-z0-9]+/g, '')}-${Date.now()}-${counter++}@example.com`;
 
 export async function signUp(page: Page, name: string): Promise<string> {
   const email = uniqueEmail(name);
@@ -24,7 +25,10 @@ export async function newUser(browser: Browser, name: string) {
 
 /** Create a project through the API (fast) and open it. */
 export async function createProject(page: Page, name: string, snapshot?: unknown): Promise<string> {
-  const res = await page.request.post('/api/projects', { data: { name, ...(snapshot ? { snapshot } : {}) }, headers: { origin: new URL(page.url()).origin } });
+  const res = await page.request.post('/api/projects', {
+    data: { name, ...(snapshot ? { snapshot } : {}) },
+    headers: { origin: new URL(page.url()).origin },
+  });
   expect(res.status()).toBe(201);
   const { id } = (await res.json()) as { id: string };
   await openProject(page, id);
@@ -37,7 +41,8 @@ export async function openProject(page: Page, id: string) {
 }
 
 export const canvas = (page: Page) => page.getByTestId('canvas');
-export const variable = (page: Page, name: string) => page.locator('[data-type="variable"]').filter({ has: page.locator('text', { hasText: name }) });
+export const variable = (page: Page, name: string) =>
+  page.locator('[data-type="variable"]').filter({ has: page.locator('text', { hasText: name }) });
 export const links = (page: Page) => page.locator('[data-type="link"]');
 export const loops = (page: Page) => page.locator('[data-type="loop"]');
 

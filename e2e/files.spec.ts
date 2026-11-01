@@ -2,10 +2,13 @@ import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { addVariable, links, loops, signUp, variable } from './helpers';
 
-const fixture = (name: string) => new URL(`../packages/mdl/test/fixtures/${name}`, import.meta.url).pathname;
+const fixture = (name: string) =>
+  new URL(`../packages/mdl/test/fixtures/${name}`, import.meta.url).pathname;
 
 test.describe('import, export and versions', () => {
-  test('imports a Vensim model and exports it byte-for-byte; exports images and PDF', async ({ page }) => {
+  test('imports a Vensim model and exports it byte-for-byte; exports images and PDF', async ({
+    page,
+  }) => {
     await signUp(page, 'Vera');
     await page.locator('input[type="file"]').setInputFiles(fixture('servitization.mdl'));
     await expect(page).toHaveURL(/\/p\//);
@@ -19,7 +22,10 @@ test.describe('import, export and versions', () => {
       await page.keyboard.press('ControlOrMeta+e');
       const dialog = page.getByRole('dialog', { name: 'Export' });
       await dialog.getByRole('button', { name: format }).click();
-      const [file] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: /^Download/ }).click()]);
+      const [file] = await Promise.all([
+        page.waitForEvent('download'),
+        dialog.getByRole('button', { name: /^Download/ }).click(),
+      ]);
       return file;
     };
 
@@ -53,7 +59,10 @@ test.describe('import, export and versions', () => {
     await addVariable(page, 'New idea', 300, 120);
     await page.getByRole('radio', { name: 'Box' }).click();
     await page.keyboard.press('ControlOrMeta+e');
-    await page.getByRole('dialog').getByRole('button', { name: /^Vensim$/ }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /^Vensim$/ })
+      .click();
     await expect(page.getByText('Variable box shapes are not exported to Vensim')).toBeVisible();
   });
 
