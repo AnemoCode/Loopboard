@@ -681,7 +681,11 @@ export function Canvas({ peers }: { peers: Peer[] }) {
           : tool === 'text'
             ? 'text'
             : 'crosshair';
-  const gridSize = 16 * z;
+  // Dots are drawn in screen pixels, so keep them at least ~12px apart: when zoomed out, show every
+  // 2nd, 4th, … point of the 16-unit grid instead of packing fixed-size dots ever closer together.
+  let gridSize = 16 * z;
+  while (gridSize < 12) gridSize *= 2;
+  const dotRadius = Math.min(1, gridSize / 16);
 
   return (
     <div
@@ -714,10 +718,10 @@ export function Canvas({ peers }: { peers: Peer[] }) {
             x={viewport.x % gridSize}
             y={viewport.y % gridSize}
           >
-            <circle cx={1} cy={1} r={1} fill="var(--grid)" />
+            <circle cx={dotRadius} cy={dotRadius} r={dotRadius} fill="var(--grid)" />
           </pattern>
         </defs>
-        {z >= 0.4 && <rect width="100%" height="100%" fill="url(#grid)" />}
+        <rect width="100%" height="100%" fill="url(#grid)" />
         <g transform={`translate(${viewport.x} ${viewport.y}) scale(${z})`}>
           {highlight.map((id) => {
             const l = layout.byId.get(id)?.link;
