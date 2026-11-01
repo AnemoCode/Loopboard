@@ -1,4 +1,5 @@
 import { desc, sql } from 'drizzle-orm';
+import type { ChangeOp } from '@cld/model';
 import {
   type AnyPgColumn,
   bigserial,
@@ -173,6 +174,11 @@ export const projectChanges = pgTable(
     summary: text('summary').notNull(),
     diagramId: text('diagram_id'),
     elementIds: jsonb('element_ids').$type<string[]>().notNull().default([]),
+    /** Inverse operations to undo this entry (null when too large or not undoable). */
+    revert: jsonb('revert').$type<ChangeOp[]>(),
+    undoneBy: text('undone_by').references(() => user.id, { onDelete: 'set null' }),
+    undoneByName: text('undone_by_name'),
+    undoneAt: timestamp('undone_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('project_changes_project_idx').on(t.projectId, desc(t.id))],
