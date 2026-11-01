@@ -23,7 +23,11 @@ export type Collab = ReturnType<typeof createCollab>;
 
 export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: string) => void }) {
   async function loadState(projectId: string): Promise<Uint8Array | null> {
-    const rows = await db.select({ state: projectDocuments.state }).from(projectDocuments).where(eq(projectDocuments.projectId, projectId)).limit(1);
+    const rows = await db
+      .select({ state: projectDocuments.state })
+      .from(projectDocuments)
+      .where(eq(projectDocuments.projectId, projectId))
+      .limit(1);
     return rows[0]?.state ?? null;
   }
 
@@ -33,21 +37,35 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
       log.warn({ projectId, size: state.byteLength }, 'document exceeds size limit; not stored');
       return;
     }
-    const exists = await db.select({ id: projects.id }).from(projects).where(eq(projects.id, projectId)).limit(1);
+    const exists = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
     if (!exists.length) return; // project was deleted while open
     await db
       .insert(projectDocuments)
       .values({ projectId, state, sizeBytes: state.byteLength })
-      .onConflictDoUpdate({ target: projectDocuments.projectId, set: { state, sizeBytes: state.byteLength, updatedAt: new Date() } });
+      .onConflictDoUpdate({
+        target: projectDocuments.projectId,
+        set: { state, sizeBytes: state.byteLength, updatedAt: new Date() },
+      });
     await db.update(projects).set({ updatedAt: new Date() }).where(eq(projects.id, projectId));
     // Automatic version at most every 10 minutes of activity; keep the latest 100.
     const recent = await db
       .select({ id: projectVersions.id })
       .from(projectVersions)
-      .where(and(eq(projectVersions.projectId, projectId), gt(projectVersions.createdAt, new Date(Date.now() - AUTO_VERSION_INTERVAL_MS))))
+      .where(
+        and(
+          eq(projectVersions.projectId, projectId),
+          gt(projectVersions.createdAt, new Date(Date.now() - AUTO_VERSION_INTERVAL_MS)),
+        ),
+      )
       .limit(1);
     if (!recent.length) {
-      await db.insert(projectVersions).values({ projectId, state, kind: 'auto', createdBy: userId });
+      await db
+        .insert(projectVersions)
+        .values({ projectId, state, kind: 'auto', createdBy: userId });
       const keep = db
         .select({ id: projectVersions.id })
         .from(projectVersions)
@@ -56,7 +74,13 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
         .limit(MAX_AUTO_VERSIONS);
       await db
         .delete(projectVersions)
-        .where(and(eq(projectVersions.projectId, projectId), eq(projectVersions.kind, 'auto'), notInArray(projectVersions.id, keep)));
+        .where(
+          and(
+            eq(projectVersions.projectId, projectId),
+            eq(projectVersions.kind, 'auto'),
+            notInArray(projectVersions.id, keep),
+          ),
+        );
     }
   }
 
@@ -128,7 +152,13 @@ export function createCollab(db: Db, auth: Auth, log: { warn: (o: object, m: str
     hocuspocus.closeConnections(docName(projectId));
   }
 
-  return { hocuspocus, withDocument, currentState, snapshot, disconnectUser, closeProject, storeState };
+  return {
+    hocuspocus,
+    withDocument,
+    currentState,
+    snapshot,
+    disconnectUser,
+    closeProject,
+    storeState,
+  };
 }
-
-

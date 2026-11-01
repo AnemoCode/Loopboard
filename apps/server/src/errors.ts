@@ -10,6 +10,10 @@ export class HttpError extends Error {
   }
 
   problem(): Problem {
-    return { title: this.title, status: this.status, ...(this.detail ? { detail: this.detail } : {}) };
+    return {
+      title: this.title,
+      status: this.status,
+      ...(this.detail ? { detail: this.detail } : {}),
+    };
   }
 }

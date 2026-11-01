@@ -50,17 +50,25 @@ export async function buildApp(env: Env, db: Db) {
   const collab = createCollab(db, auth, app.log);
   const publicOrigin = new URL(env.PUBLIC_URL).origin;
 
-  if (!env.DISABLE_RATE_LIMIT) await app.register(rateLimit, { global: true, max: 600, timeWindow: '1 minute' });
+  if (!env.DISABLE_RATE_LIMIT)
+    await app.register(rateLimit, { global: true, max: 600, timeWindow: '1 minute' });
   await app.register(websocket, { options: { maxPayload: 4 * 1024 * 1024 } });
 
   app.setErrorHandler((err: Error & { statusCode?: number; validation?: unknown }, req, reply) => {
-    if (err instanceof HttpError) return reply.status(err.status).type('application/problem+json').send(err.problem());
+    if (err instanceof HttpError)
+      return reply.status(err.status).type('application/problem+json').send(err.problem());
     if (err.name === 'ZodError') {
-      return reply.status(400).type('application/problem+json').send({ title: 'Invalid request', status: 400, detail: err.message });
+      return reply
+        .status(400)
+        .type('application/problem+json')
+        .send({ title: 'Invalid request', status: 400, detail: err.message });
     }
     const status = err.statusCode && err.statusCode < 500 ? err.statusCode : 500;
     if (status >= 500) req.log.error(err);
-    return reply.status(status).type('application/problem+json').send({ title: status >= 500 ? 'Something went wrong' : err.message, status });
+    return reply
+      .status(status)
+      .type('application/problem+json')
+      .send({ title: status >= 500 ? 'Something went wrong' : err.message, status });
   });
 
   // CSRF defence in depth (cookies are SameSite=Lax): mutating API calls must come from our origin.
@@ -74,7 +82,13 @@ export async function buildApp(env: Env, db: Db) {
   app.addHook('preHandler', async (req) => {
     if (!req.url.startsWith('/api/') || req.url.startsWith('/api/auth/')) return;
     const session = await auth.api.getSession({ headers: headersOf(req) });
-    if (session) req.user = { id: session.user.id, name: session.user.name, email: session.user.email, image: session.user.image ?? null };
+    if (session)
+      req.user = {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        image: session.user.image ?? null,
+      };
   });
 
   const requireUser = (req: FastifyRequest): Me => {
@@ -99,7 +113,8 @@ export async function buildApp(env: Env, db: Db) {
       const request = new Request(url, {
         method: req.method,
         headers: headersOf(req),
-        body: req.method === 'POST' && req.body !== undefined ? JSON.stringify(req.body) : undefined,
+        body:
+          req.method === 'POST' && req.body !== undefined ? JSON.stringify(req.body) : undefined,
       });
       const res = await auth.handler(request);
       reply.status(res.status);
@@ -136,10 +151,16 @@ export async function buildApp(env: Env, db: Db) {
     const request = new Request(new URL(req.url, env.PUBLIC_URL), { headers: headersOf(req) });
     const conn = collab.hocuspocus.handleConnection(socket, request);
     socket.on('message', (data: Buffer | ArrayBuffer | Buffer[]) => {
-      const bytes = Array.isArray(data) ? Buffer.concat(data) : data instanceof ArrayBuffer ? Buffer.from(data) : data;
+      const bytes = Array.isArray(data)
+        ? Buffer.concat(data)
+        : data instanceof ArrayBuffer
+          ? Buffer.from(data)
+          : data;
       conn.handleMessage(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength));
     });
-    socket.on('close', (code: number, reason: Buffer) => conn.handleClose({ code, reason: reason.toString() } as CloseEvent));
+    socket.on('close', (code: number, reason: Buffer) =>
+      conn.handleClose({ code, reason: reason.toString() } as CloseEvent),
+    );
     socket.on('pong', () => conn.touch());
   });
 

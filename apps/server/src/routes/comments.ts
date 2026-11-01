@@ -1,6 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import * as Y from 'yjs';
-import { addMessage, addThread, editMessage, getMessage, roots, setThreadResolved } from '@cld/model';
+import {
+  addMessage,
+  addThread,
+  editMessage,
+  getMessage,
+  roots,
+  setThreadResolved,
+} from '@cld/model';
 import { atLeast, commentBody, replyBody, resolveBody } from '@cld/shared';
 import type { Ctx } from '../app.js';
 import { isUuid } from '../access.js';
@@ -49,7 +56,12 @@ export async function commentRoutes(app: FastifyInstance, ctx: Ctx) {
     const { threadId } = req.params as { threadId: string };
     let messageId: string | null = null;
     await collab.withDocument(id, (doc) => {
-      messageId = addMessage(doc, threadId, { authorId: me.id, authorName: me.name, body, createdAt: Date.now() });
+      messageId = addMessage(doc, threadId, {
+        authorId: me.id,
+        authorName: me.name,
+        body,
+        createdAt: Date.now(),
+      });
     });
     if (!messageId) throw new HttpError(404, 'Comment not found');
     return reply.status(201).send({ id: messageId });
@@ -64,10 +76,17 @@ export async function commentRoutes(app: FastifyInstance, ctx: Ctx) {
     return { ok: true };
   });
 
-  const authorize = (doc: Y.Doc, threadId: string, messageId: string, userId: string, canModerate: boolean) => {
+  const authorize = (
+    doc: Y.Doc,
+    threadId: string,
+    messageId: string,
+    userId: string,
+    canModerate: boolean,
+  ) => {
     const msg = getMessage(doc, threadId, messageId);
     if (!msg) throw new HttpError(404, 'Comment not found');
-    if (msg.authorId !== userId && !canModerate) throw new HttpError(403, 'You can only change your own comments');
+    if (msg.authorId !== userId && !canModerate)
+      throw new HttpError(403, 'You can only change your own comments');
   };
 
   app.patch('/api/projects/:id/comments/:threadId/messages/:messageId', async (req) => {

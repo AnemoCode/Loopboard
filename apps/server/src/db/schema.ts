@@ -1,5 +1,16 @@
 import { sql } from 'drizzle-orm';
-import { boolean, customType, index, integer, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  customType,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 const bytea = customType<{ data: Uint8Array; driverData: Buffer }>({
   dataType: () => 'bytea',
@@ -29,7 +40,9 @@ export const session = pgTable('session', {
   token: text('token').notNull().unique(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   ...timestamps,
 });
 
@@ -37,7 +50,9 @@ export const account = pgTable('account', {
   id: text('id').primaryKey(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),
@@ -63,19 +78,28 @@ export const roleEnum = pgEnum('project_role', ['owner', 'editor', 'commenter', 
 export const projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
-  ownerId: text('owner_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  ownerId: text('owner_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   ...timestamps,
 });
 
 export const projectMembers = pgTable(
   'project_members',
   {
-    projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-    userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
     role: roleEnum('role').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.projectId, t.userId] }), index('project_members_user_idx').on(t.userId)],
+  (t) => [
+    primaryKey({ columns: [t.projectId, t.userId] }),
+    index('project_members_user_idx').on(t.userId),
+  ],
 );
 
 /** Email invites for people without an account yet, and share links (email = null). */
@@ -83,7 +107,9 @@ export const projectInvites = pgTable(
   'project_invites',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     email: text('email'),
     token: text('token').unique(),
     role: roleEnum('role').notNull(),
@@ -94,7 +120,9 @@ export const projectInvites = pgTable(
 );
 
 export const projectDocuments = pgTable('project_documents', {
-  projectId: uuid('project_id').primaryKey().references(() => projects.id, { onDelete: 'cascade' }),
+  projectId: uuid('project_id')
+    .primaryKey()
+    .references(() => projects.id, { onDelete: 'cascade' }),
   state: bytea('state').notNull(),
   sizeBytes: integer('size_bytes').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -106,12 +134,16 @@ export const projectVersions = pgTable(
   'project_versions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     state: bytea('state').notNull(),
     label: text('label'),
     kind: versionKind('kind').notNull(),
     createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
   },
   (t) => [index('project_versions_project_idx').on(t.projectId, t.createdAt)],
 );
