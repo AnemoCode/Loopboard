@@ -130,17 +130,36 @@ export interface ChangeSummary {
   userId: string | null;
   userName: string;
   kind:
-    'add' | 'delete' | 'rename' | 'edit' | 'style' | 'layout' | 'comment' | 'structure' | 'restore';
+    | 'add'
+    | 'delete'
+    | 'rename'
+    | 'edit'
+    | 'style'
+    | 'layout'
+    | 'comment'
+    | 'structure'
+    | 'restore'
+    | 'undo';
   summary: string;
   diagramId: string | null;
   elementIds: string[];
   createdAt: string;
+  /** False when the change can't be undone (too large, or already undone). */
+  undoable: boolean;
+  /** Who undid this change, if anyone. */
+  undoneByName: string | null;
 }
 
 export interface ChangesPage {
   changes: ChangeSummary[];
   /** Pass as `before` to load older entries; null when there are none. */
   nextCursor: number | null;
+}
+
+export interface UndoResult {
+  /** Parts that were undone / left alone because they were changed again later. */
+  applied: number;
+  skipped: number;
 }
 
 export interface InvitePreview {
