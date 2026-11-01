@@ -5,7 +5,8 @@ import { arcThrough, type ProjectSnapshot } from '@cld/model';
 import { darkTheme, layoutDiagram, measureText, renderDiagramSvg, wrapText } from '../src/index.js';
 
 const load = (name: string) =>
-  parseMdl(readFileSync(new URL(`../../mdl/test/fixtures/${name}`, import.meta.url), 'utf8')).snapshot;
+  parseMdl(readFileSync(new URL(`../../mdl/test/fixtures/${name}`, import.meta.url), 'utf8'))
+    .snapshot;
 const first = (s: ProjectSnapshot) => Object.keys(s.diagrams)[0]!;
 
 describe('text', () => {
@@ -37,13 +38,17 @@ describe.each(['coffee-agroforestry.mdl', 'servitization.mdl'])('rendering %s', 
 
   it('lays out every element and clips links outside their nodes', () => {
     const d = snap.diagrams[first(snap)]!;
-    const layout = layoutDiagram({ elements: d.elements, layers: d.layers, variableName: (id) => snap.variables[id]!.name }, darkTheme);
+    const layout = layoutDiagram(
+      { elements: d.elements, layers: d.layers, variableName: (id) => snap.variables[id]!.name },
+      darkTheme,
+    );
     expect(layout.order.length).toBe(Object.keys(d.elements).length);
     for (const el of Object.values(d.elements)) {
       if (el.type !== 'link') continue;
       const l = layout.byId.get(el.id)!.link!;
       const fromBox = layout.byId.get(el.from)!.bbox;
-      const inside = (p: { x: number; y: number }, b: typeof fromBox) => p.x > b.x && p.x < b.x + b.w && p.y > b.y && p.y < b.y + b.h;
+      const inside = (p: { x: number; y: number }, b: typeof fromBox) =>
+        p.x > b.x && p.x < b.x + b.w && p.y > b.y && p.y < b.y + b.h;
       expect(inside(l.start, fromBox)).toBe(false);
       expect(inside(l.end, layout.byId.get(el.to)!.bbox)).toBe(false);
     }

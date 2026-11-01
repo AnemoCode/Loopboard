@@ -111,15 +111,20 @@ export function findLoops(diagram: Diagram, maxLoops = 200, maxLength = 14): Loo
 export function freeSpotNear(diagram: Diagram, center: Point, clearance = 46): Point {
   const obstacles: Point[] = [];
   for (const el of Object.values(diagram.elements)) {
-    if (el.type === 'variable' || el.type === 'loop' || el.type === 'text') obstacles.push({ x: el.x, y: el.y });
+    if (el.type === 'variable' || el.type === 'loop' || el.type === 'text')
+      obstacles.push({ x: el.x, y: el.y });
   }
-  const free = (p: Point) => obstacles.every((o) => Math.hypot((o.x - p.x) * 0.6, o.y - p.y) >= clearance);
+  const free = (p: Point) =>
+    obstacles.every((o) => Math.hypot((o.x - p.x) * 0.6, o.y - p.y) >= clearance);
   for (let ring = 0; ring <= 6; ring++) {
     const r = ring * 22;
     const steps = ring === 0 ? 1 : 8 + ring * 4;
     for (let k = 0; k < steps; k++) {
       const a = (k / steps) * Math.PI * 2;
-      const p = { x: Math.round(center.x + Math.cos(a) * r), y: Math.round(center.y + Math.sin(a) * r) };
+      const p = {
+        x: Math.round(center.x + Math.cos(a) * r),
+        y: Math.round(center.y + Math.sin(a) * r),
+      };
       if (free(p)) return p;
     }
   }

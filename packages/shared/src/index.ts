@@ -8,7 +8,8 @@ export const INVITABLE_ROLES = ['editor', 'commenter', 'viewer'] as const;
 export type InvitableRole = (typeof INVITABLE_ROLES)[number];
 
 const RANK: Record<Role, number> = { viewer: 0, commenter: 1, editor: 2, owner: 3 };
-export const atLeast = (role: Role | null | undefined, min: Role): boolean => !!role && RANK[role] >= RANK[min];
+export const atLeast = (role: Role | null | undefined, min: Role): boolean =>
+  !!role && RANK[role] >= RANK[min];
 
 export const ROLE_LABELS: Record<Role, string> = {
   owner: 'Owner',

@@ -9,7 +9,14 @@ import {
   type ProjectSnapshot,
   type Variable,
 } from '@cld/model';
-import { fontFieldColor, rgbToHex, splitFields, splitOutsideQuotes, unquote, vensimKey } from './util.js';
+import {
+  fontFieldColor,
+  rgbToHex,
+  splitFields,
+  splitOutsideQuotes,
+  unquote,
+  vensimKey,
+} from './util.js';
 
 export interface MdlParseResult {
   snapshot: ProjectSnapshot;
@@ -93,7 +100,12 @@ export function parseMdl(input: string): MdlParseResult {
         name: info.name,
         ...(info.units ? { units: info.units } : {}),
         ...(info.notes ? { notes: info.notes } : {}),
-        mdl: { equation: raw, name: info.name, order: order++, ...(info.causes ? { causesKey: causesKey(info.causes) } : {}) },
+        mdl: {
+          equation: raw,
+          name: info.name,
+          order: order++,
+          ...(info.causes ? { causesKey: causesKey(info.causes) } : {}),
+        },
       };
       variables[id] = last;
       byKey.set(vensimKey(info.name), id);
@@ -104,7 +116,8 @@ export function parseMdl(input: string): MdlParseResult {
     preamble += `${cur.join('\n')}\n`;
   }
   let controlSection = '';
-  for (; i < lines.length && !lines[i]!.startsWith(SKETCH_MARKER); i++) controlSection += `${lines[i]}\n`;
+  for (; i < lines.length && !lines[i]!.startsWith(SKETCH_MARKER); i++)
+    controlSection += `${lines[i]}\n`;
 
   // ---- sketch
   const diagrams: Record<string, Diagram> = {};
@@ -116,7 +129,12 @@ export function parseMdl(input: string): MdlParseResult {
     sketchHeader = `${lines[i++]}\n`;
     if (lines[i]?.startsWith('V')) sketchHeader += `${lines[i++]}\n`;
     const diagramOrders: string[] = [];
-    let view: { diagram: Diagram; layerId: string; ids: Map<number, string>; elements: DiagramElement[] } | null = null;
+    let view: {
+      diagram: Diagram;
+      layerId: string;
+      ids: Map<number, string>;
+      elements: DiagramElement[];
+    } | null = null;
 
     const finishView = () => {
       if (!view) return;
@@ -137,7 +155,10 @@ export function parseMdl(input: string): MdlParseResult {
           el.to = to!;
         } else {
           delete view.diagram.elements[el.id];
-          view.diagram.mdl!.unknown!.push({ sketchId: el.mdl!.sketchId!, lines: [rebuildLinkLine(el)] });
+          view.diagram.mdl!.unknown!.push({
+            sketchId: el.mdl!.sketchId!,
+            lines: [rebuildLinkLine(el)],
+          });
         }
       }
       diagrams[view.diagram.id] = view.diagram;
@@ -156,7 +177,15 @@ export function parseMdl(input: string): MdlParseResult {
           id: newId(),
           name: line.slice(1).trim() || 'View',
           order,
-          layers: { [layerId]: { id: layerId, name: 'Base', order: keyAfter([]), visible: true, locked: false } },
+          layers: {
+            [layerId]: {
+              id: layerId,
+              name: 'Base',
+              order: keyAfter([]),
+              visible: true,
+              locked: false,
+            },
+          },
           elements: {},
           mdl: { viewLine: line, unknown: [] },
         };
@@ -184,7 +213,10 @@ export function parseMdl(input: string): MdlParseResult {
         const points = bar >= 0 ? line.slice(bar + 1) : '';
         const f = splitFields(head);
         const sketchId = Number(f[1]);
-        const pts = [...points.matchAll(/\((-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\)/g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]) }));
+        const pts = [...points.matchAll(/\((-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\)/g)].map((m) => ({
+          x: Number(m[1]),
+          y: Number(m[2]),
+        }));
         const p = pts[0];
         const el: Link = {
           id: newId(),
@@ -199,7 +231,10 @@ export function parseMdl(input: string): MdlParseResult {
         };
         const color = rgbToHex(f[11]);
         if (color) el.style = { color };
-        if (pts.length > 1) warnings.push(`Link ${sketchId} has ${pts.length} points; only the first is used for its curve.`);
+        if (pts.length > 1)
+          warnings.push(
+            `Link ${sketchId} has ${pts.length} points; only the first is used for its curve.`,
+          );
         view.ids.set(sketchId, el.id);
         view.elements.push(el);
         continue;
@@ -241,9 +276,15 @@ export function parseMdl(input: string): MdlParseResult {
       if (type === '12') {
         const bits = Number(f[8]);
         let text: string | undefined;
-        if (bits & 4 && i + 1 < lines.length && !lines[i + 1]!.startsWith(SKETCH_END)) text = lines[++i]!;
+        if (bits & 4 && i + 1 < lines.length && !lines[i + 1]!.startsWith(SKETCH_END))
+          text = lines[++i]!;
         const shape = f[7];
-        const base = { id: newId(), layerId: view.layerId, z: '', mdl: { sketchId, fields: f, ...(text !== undefined ? { text } : {}) } };
+        const base = {
+          id: newId(),
+          layerId: view.layerId,
+          z: '',
+          mdl: { sketchId, fields: f, ...(text !== undefined ? { text } : {}) },
+        };
         let el: DiagramElement;
         if (shape === '4' || shape === '5') {
           const label = (text ?? '').trim();
@@ -258,14 +299,24 @@ export function parseMdl(input: string): MdlParseResult {
             direction: shape === '4' ? 'cw' : 'ccw',
           };
         } else {
-          el = { ...base, type: 'text', x: Number(f[3]), y: Number(f[4]), w: Number(f[5]) * 2, h: Number(f[6]) * 2, text: text ?? '' };
+          el = {
+            ...base,
+            type: 'text',
+            x: Number(f[3]),
+            y: Number(f[4]),
+            w: Number(f[5]) * 2,
+            h: Number(f[6]) * 2,
+            text: text ?? '',
+          };
         }
         view.ids.set(sketchId, el.id);
         view.elements.push(el);
         continue;
       }
       view.diagram.mdl!.unknown!.push({ sketchId, lines: [line] });
-      warnings.push(`Sketch object type ${type} (id ${sketchId}) is not editable and will be preserved as-is.`);
+      warnings.push(
+        `Sketch object type ${type} (id ${sketchId}) is not editable and will be preserved as-is.`,
+      );
     }
     finishView();
     settings = lines.slice(i).join('\n');
@@ -277,7 +328,9 @@ export function parseMdl(input: string): MdlParseResult {
       id: newId(),
       name: 'View 1',
       order: keyAfter([]),
-      layers: { [layerId]: { id: layerId, name: 'Base', order: keyAfter([]), visible: true, locked: false } },
+      layers: {
+        [layerId]: { id: layerId, name: 'Base', order: keyAfter([]), visible: true, locked: false },
+      },
       elements: {},
     };
     diagrams[d.id] = d;

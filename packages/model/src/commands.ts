@@ -63,7 +63,9 @@ export function newDiagram(name: string, order: string): Diagram {
     id: newId(),
     name,
     order,
-    layers: { [layerId]: { id: layerId, name: 'Base', order: keyAfter([]), visible: true, locked: false } },
+    layers: {
+      [layerId]: { id: layerId, name: 'Base', order: keyAfter([]), visible: true, locked: false },
+    },
     elements: {},
   };
 }
@@ -82,7 +84,12 @@ export function initDoc(doc: Y.Doc, diagramName = 'Main', origin: unknown = 'ini
 
 export function emptySnapshot(diagramName = 'Main'): ProjectSnapshot {
   const d = newDiagram(diagramName, keyAfter([]));
-  return { meta: { schemaVersion: SCHEMA_VERSION }, variables: {}, diagrams: { [d.id]: d }, comments: {} };
+  return {
+    meta: { schemaVersion: SCHEMA_VERSION },
+    variables: {},
+    diagrams: { [d.id]: d },
+    comments: {},
+  };
 }
 
 /** Replace the entire content of `doc` with `snap` (restore / import-replace). */
@@ -142,12 +149,20 @@ export function appendSnapshot(doc: Y.Doc, snap: ProjectSnapshot, origin?: unkno
         name: d.name,
         order,
         layers: Object.fromEntries(
-          Object.values(d.layers).map((l) => [layerMap.get(l.id)!, { ...l, id: layerMap.get(l.id)! }]),
+          Object.values(d.layers).map((l) => [
+            layerMap.get(l.id)!,
+            { ...l, id: layerMap.get(l.id)! },
+          ]),
         ),
         elements: {},
       };
       for (const el of Object.values(d.elements)) {
-        const ne = { ...el, id: idMap.get(el.id)!, layerId: layerMap.get(el.layerId) ?? el.layerId, mdl: undefined } as DiagramElement;
+        const ne = {
+          ...el,
+          id: idMap.get(el.id)!,
+          layerId: layerMap.get(el.layerId) ?? el.layerId,
+          mdl: undefined,
+        } as DiagramElement;
         if (ne.type === 'variable') {
           const vm = varMap.get(ne.variableId);
           if (!vm) continue;
@@ -184,7 +199,12 @@ export function renameDiagram(doc: Y.Doc, diagramId: string, name: string, origi
   run(doc, origin, () => getDiagramY(doc, diagramId)?.set('name', name));
 }
 
-export function setDiagramOrder(doc: Y.Doc, diagramId: string, order: string, origin?: unknown): void {
+export function setDiagramOrder(
+  doc: Y.Doc,
+  diagramId: string,
+  order: string,
+  origin?: unknown,
+): void {
   run(doc, origin, () => getDiagramY(doc, diagramId)?.set('order', order));
 }
 
@@ -218,12 +238,20 @@ export function duplicateDiagram(doc: Y.Doc, diagramId: string, origin?: unknown
       name: `${src.name} copy`,
       order: keyBetween(src.order, next),
       layers: Object.fromEntries(
-        Object.values(src.layers).map((l) => [layerMap.get(l.id)!, { ...l, id: layerMap.get(l.id)! }]),
+        Object.values(src.layers).map((l) => [
+          layerMap.get(l.id)!,
+          { ...l, id: layerMap.get(l.id)! },
+        ]),
       ),
       elements: {},
     };
     for (const el of Object.values(src.elements)) {
-      const ne = { ...el, id: idMap.get(el.id)!, layerId: layerMap.get(el.layerId)!, mdl: undefined } as DiagramElement;
+      const ne = {
+        ...el,
+        id: idMap.get(el.id)!,
+        layerId: layerMap.get(el.layerId)!,
+        mdl: undefined,
+      } as DiagramElement;
       if (ne.type === 'variable') ne.isShadow = true;
       if (ne.type === 'link') {
         ne.from = idMap.get(ne.from)!;
@@ -244,7 +272,13 @@ export function addLayer(doc: Y.Doc, diagramId: string, name: string, origin?: u
     if (!layers) throw new Error('Unknown diagram');
     const orders: string[] = [];
     layers.forEach((l) => orders.push(l.get('order') as string));
-    const layer: Layer = { id: newId(), name, order: keyAfter(orders), visible: true, locked: false };
+    const layer: Layer = {
+      id: newId(),
+      name,
+      order: keyAfter(orders),
+      visible: true,
+      locked: false,
+    };
     layers.set(layer.id, layerToY(layer));
     return layer.id;
   });
@@ -305,7 +339,12 @@ function hasPrimaryNode(doc: Y.Doc, variableId: string): boolean {
   let found = false;
   roots(doc).diagrams.forEach((d) => {
     (d.get('elements') as Y.Map<YMap>).forEach((el) => {
-      if (el.get('type') === 'variable' && el.get('variableId') === variableId && !el.get('isShadow')) found = true;
+      if (
+        el.get('type') === 'variable' &&
+        el.get('variableId') === variableId &&
+        !el.get('isShadow')
+      )
+        found = true;
     });
   });
   return found;
@@ -326,7 +365,12 @@ export interface AddVariableOptions {
  * Place a variable. If a variable with the same name exists the new node references it
  * (and becomes a shadow when the variable already has a primary node).
  */
-export function addVariableNode(doc: Y.Doc, diagramId: string, opts: AddVariableOptions, origin?: unknown): string {
+export function addVariableNode(
+  doc: Y.Doc,
+  diagramId: string,
+  opts: AddVariableOptions,
+  origin?: unknown,
+): string {
   return run(doc, origin, () => {
     const r = roots(doc);
     const els = requireElements(doc, diagramId);
@@ -362,7 +406,12 @@ export function addVariableNode(doc: Y.Doc, diagramId: string, opts: AddVariable
 
 export type RenameResult = { ok: true } | { ok: false; reason: 'empty' | 'duplicate' };
 
-export function renameVariable(doc: Y.Doc, variableId: string, name: string, origin?: unknown): RenameResult {
+export function renameVariable(
+  doc: Y.Doc,
+  variableId: string,
+  name: string,
+  origin?: unknown,
+): RenameResult {
   const trimmed = name.trim().replace(/\s+/g, ' ');
   if (!trimmed) return { ok: false, reason: 'empty' };
   const existing = findVariableByName(doc, trimmed);
@@ -389,17 +438,31 @@ export function updateVariable(
 
 // ---------------------------------------------------------------- elements
 
-export function addElement(doc: Y.Doc, diagramId: string, el: NewElement, origin?: unknown): string {
+export function addElement(
+  doc: Y.Doc,
+  diagramId: string,
+  el: NewElement,
+  origin?: unknown,
+): string {
   return run(doc, origin, () => {
     const els = requireElements(doc, diagramId);
-    const full = { ...el, id: el.id ?? newId(), z: el.z ?? keyAfter(zKeysInLayer(els, el.layerId)) } as DiagramElement;
+    const full = {
+      ...el,
+      id: el.id ?? newId(),
+      z: el.z ?? keyAfter(zKeysInLayer(els, el.layerId)),
+    } as DiagramElement;
     els.set(full.id, elementToY(full));
     return full.id;
   });
 }
 
 /** Add several elements at once (paste / duplicate); keeps their relative z order. */
-export function addElements(doc: Y.Doc, diagramId: string, list: NewElement[], origin?: unknown): string[] {
+export function addElements(
+  doc: Y.Doc,
+  diagramId: string,
+  list: NewElement[],
+  origin?: unknown,
+): string[] {
   return run(doc, origin, () => list.map((el) => addElement(doc, diagramId, el)));
 }
 
@@ -423,7 +486,13 @@ export function updateElement(
 }
 
 /** Patch style props of many elements. `undefined` resets a prop to the theme default. */
-export function setStyle(doc: Y.Doc, diagramId: string, ids: string[], patch: Style, origin?: unknown): void {
+export function setStyle(
+  doc: Y.Doc,
+  diagramId: string,
+  ids: string[],
+  patch: Style,
+  origin?: unknown,
+): void {
   run(doc, origin, () => {
     const els = getElementsY(doc, diagramId);
     if (!els) return;
@@ -496,20 +565,29 @@ export function moveElements(doc: Y.Doc, diagramId: string, moves: Move[], origi
 }
 
 /** Delete elements; cascades to attached links, detaches anchored comments and GCs orphan variables. */
-export function deleteElements(doc: Y.Doc, diagramId: string, ids: string[], origin?: unknown): number {
+export function deleteElements(
+  doc: Y.Doc,
+  diagramId: string,
+  ids: string[],
+  origin?: unknown,
+): number {
   return run(doc, origin, () => {
     const els = getElementsY(doc, diagramId);
     if (!els) return 0;
     const del = new Set(ids.filter((id) => els.has(id)));
     els.forEach((el, id) => {
-      if (el.get('type') === 'link' && (del.has(el.get('from') as string) || del.has(el.get('to') as string))) {
+      if (
+        el.get('type') === 'link' &&
+        (del.has(el.get('from') as string) || del.has(el.get('to') as string))
+      ) {
         del.add(id);
       }
     });
     const promote = new Set<string>();
     for (const id of del) {
       const el = els.get(id);
-      if (el?.get('type') === 'variable' && !el.get('isShadow')) promote.add(el.get('variableId') as string);
+      if (el?.get('type') === 'variable' && !el.get('isShadow'))
+        promote.add(el.get('variableId') as string);
     }
     // Detach comments anchored to deleted elements, keeping their position.
     roots(doc).comments.forEach((t) => {
@@ -543,7 +621,13 @@ export function deleteElements(doc: Y.Doc, diagramId: string, ids: string[], ori
 
 export type ZOrderOp = 'front' | 'back' | 'forward' | 'backward';
 
-export function reorderElements(doc: Y.Doc, diagramId: string, ids: string[], op: ZOrderOp, origin?: unknown): void {
+export function reorderElements(
+  doc: Y.Doc,
+  diagramId: string,
+  ids: string[],
+  op: ZOrderOp,
+  origin?: unknown,
+): void {
   run(doc, origin, () => {
     const els = getElementsY(doc, diagramId);
     if (!els) return;
@@ -583,7 +667,13 @@ export function reorderElements(doc: Y.Doc, diagramId: string, ids: string[], op
   });
 }
 
-export function moveToLayer(doc: Y.Doc, diagramId: string, ids: string[], layerId: string, origin?: unknown): void {
+export function moveToLayer(
+  doc: Y.Doc,
+  diagramId: string,
+  ids: string[],
+  layerId: string,
+  origin?: unknown,
+): void {
   run(doc, origin, () => {
     const els = getElementsY(doc, diagramId);
     if (!els) return;
@@ -634,7 +724,9 @@ export function pasteElements(
     for (const item of items) {
       if (item.type === 'link') continue;
       if (item.type === 'variable') {
-        const name = item.variableName ?? (r.variables.get(item.variableId)?.get('name') as string | undefined);
+        const name =
+          item.variableName ??
+          (r.variables.get(item.variableId)?.get('name') as string | undefined);
         if (!name) continue;
         const id = addVariableNode(doc, diagramId, {
           name,
@@ -650,7 +742,12 @@ export function pasteElements(
         created.push(id);
       } else {
         const { id: oldId, z: _z, mdl: _m, ...rest } = item;
-        const id = addElement(doc, diagramId, { ...rest, layerId, x: item.x + dx, y: item.y + dy } as NewElement);
+        const id = addElement(doc, diagramId, {
+          ...rest,
+          layerId,
+          x: item.x + dx,
+          y: item.y + dy,
+        } as NewElement);
         idMap.set(oldId, id);
         created.push(id);
       }
@@ -678,13 +775,22 @@ export function pasteElements(
 
 export function addThread(
   doc: Y.Doc,
-  thread: Omit<CommentThread, 'id' | 'messages' | 'resolved'> & { body: string; authorName: string },
+  thread: Omit<CommentThread, 'id' | 'messages' | 'resolved'> & {
+    body: string;
+    authorName: string;
+  },
   origin?: unknown,
 ): string {
   return run(doc, origin, () => {
     const { body, authorName, ...rest } = thread;
     const id = newId();
-    const msg: CommentMessage = { id: newId(), authorId: rest.createdBy, authorName, body, createdAt: rest.createdAt };
+    const msg: CommentMessage = {
+      id: newId(),
+      authorId: rest.createdBy,
+      authorName,
+      body,
+      createdAt: rest.createdAt,
+    };
     roots(doc).comments.set(id, threadToY({ ...rest, id, resolved: false, messages: [msg] }));
     return id;
   });
@@ -705,11 +811,22 @@ export function addMessage(
   });
 }
 
-export function setThreadResolved(doc: Y.Doc, threadId: string, resolved: boolean, origin?: unknown): void {
+export function setThreadResolved(
+  doc: Y.Doc,
+  threadId: string,
+  resolved: boolean,
+  origin?: unknown,
+): void {
   run(doc, origin, () => roots(doc).comments.get(threadId)?.set('resolved', resolved));
 }
 
-export function moveThread(doc: Y.Doc, threadId: string, x: number, y: number, origin?: unknown): void {
+export function moveThread(
+  doc: Y.Doc,
+  threadId: string,
+  x: number,
+  y: number,
+  origin?: unknown,
+): void {
   run(doc, origin, () => {
     const t = roots(doc).comments.get(threadId);
     t?.set('x', Math.round(x));
@@ -721,8 +838,13 @@ export function deleteThread(doc: Y.Doc, threadId: string, origin?: unknown): vo
   run(doc, origin, () => roots(doc).comments.delete(threadId));
 }
 
-export function getMessage(doc: Y.Doc, threadId: string, messageId: string): CommentMessage | undefined {
-  const arr = roots(doc).comments.get(threadId)?.get('messages') as Y.Array<CommentMessage> | undefined;
+export function getMessage(
+  doc: Y.Doc,
+  threadId: string,
+  messageId: string,
+): CommentMessage | undefined {
+  const arr = roots(doc).comments.get(threadId)?.get('messages') as
+    Y.Array<CommentMessage> | undefined;
   return arr?.toArray().find((m) => m.id === messageId);
 }
 
@@ -801,7 +923,13 @@ export function repairDoc(doc: Y.Doc, origin: unknown = 'repair'): boolean {
       const layers = d.get('layers') as Y.Map<YMap>;
       const els = d.get('elements') as Y.Map<YMap>;
       if (layers.size === 0) {
-        const l: Layer = { id: newId(), name: 'Base', order: keyAfter([]), visible: true, locked: false };
+        const l: Layer = {
+          id: newId(),
+          name: 'Base',
+          order: keyAfter([]),
+          visible: true,
+          locked: false,
+        };
         layers.set(l.id, layerToY(l));
         changed = true;
       }
@@ -831,7 +959,8 @@ export function repairDoc(doc: Y.Doc, origin: unknown = 'repair'): boolean {
         if (el.get('type') !== 'link') return;
         const from = els.get(el.get('from') as string);
         const to = els.get(el.get('to') as string);
-        if (!from || !to || from.get('type') !== 'variable' || to.get('type') !== 'variable') dangling.push(id);
+        if (!from || !to || from.get('type') !== 'variable' || to.get('type') !== 'variable')
+          dangling.push(id);
       });
       for (const id of dangling) els.delete(id);
       if (toDelete.length || dangling.length) changed = true;
@@ -839,4 +968,3 @@ export function repairDoc(doc: Y.Doc, origin: unknown = 'repair'): boolean {
   });
   return changed;
 }
-

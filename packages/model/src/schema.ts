@@ -108,7 +108,12 @@ export const diagramSchema = z.object({
     .object({
       viewLine: z.string().max(2000).optional(),
       headerLine: z.string().max(5000).optional(),
-      unknown: z.array(z.object({ sketchId: z.number().int(), lines: z.array(z.string().max(10000)).max(100) })).max(10000).optional(),
+      unknown: z
+        .array(
+          z.object({ sketchId: z.number().int(), lines: z.array(z.string().max(10000)).max(100) }),
+        )
+        .max(10000)
+        .optional(),
     })
     .optional(),
 });

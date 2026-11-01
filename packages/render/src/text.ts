@@ -18,7 +18,11 @@ export const FONT_STACKS: Record<FontFamily, string> = {
 };
 
 /** Names of the matching jsPDF base-14 fonts (used for PDF export). */
-export const PDF_FONTS: Record<FontFamily, string> = { sans: 'helvetica', serif: 'times', mono: 'courier' };
+export const PDF_FONTS: Record<FontFamily, string> = {
+  sans: 'helvetica',
+  serif: 'times',
+  mono: 'courier',
+};
 
 const FALLBACK = 600;
 

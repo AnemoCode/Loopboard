@@ -21,10 +21,12 @@ import {
 } from '@cld/model';
 import { parseMdl, writeMdl } from '../src/index.js';
 
-const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
+const fixture = (name: string) =>
+  readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
 const FIXTURES = ['coffee-agroforestry.mdl', 'servitization.mdl'];
 
-const all = (s: ProjectSnapshot) => Object.values(s.diagrams).flatMap((d) => Object.values(d.elements));
+const all = (s: ProjectSnapshot) =>
+  Object.values(s.diagrams).flatMap((d) => Object.values(d.elements));
 const toDoc = (s: ProjectSnapshot) => {
   const doc = new Y.Doc();
   replaceContent(doc, s);
@@ -61,8 +63,15 @@ describe('coffee fixture semantics', () => {
     expect(els.filter((e) => e.type === 'variable')).toHaveLength(22);
     expect(els.filter((e) => e.type === 'link')).toHaveLength(29);
     const loops = els.filter((e): e is LoopMarker => e.type === 'loop');
-    expect(loops.map((l) => `${l.label}:${l.direction}`).sort()).toEqual(['B:cw', 'B:cw', 'R:cw', 'R:cw']);
-    const node = els.find((e) => e.type === 'variable' && snapshot.variables[e.variableId]!.name === 'Customer trust') as VariableNode;
+    expect(loops.map((l) => `${l.label}:${l.direction}`).sort()).toEqual([
+      'B:cw',
+      'B:cw',
+      'R:cw',
+      'R:cw',
+    ]);
+    const node = els.find(
+      (e) => e.type === 'variable' && snapshot.variables[e.variableId]!.name === 'Customer trust',
+    ) as VariableNode;
     expect(node).toMatchObject({ x: 1212, y: 326, w: 148, h: 24 });
   });
 
@@ -85,7 +94,12 @@ describe('servitization fixture semantics', () => {
 
   it('reads counter-clockwise loops, comments and text colors', () => {
     const loops = els.filter((e): e is LoopMarker => e.type === 'loop');
-    expect(loops.map((l) => `${l.label}:${l.direction}`).sort()).toEqual(['B:ccw', 'B:cw', 'R:cw', 'R:cw']);
+    expect(loops.map((l) => `${l.label}:${l.direction}`).sort()).toEqual([
+      'B:ccw',
+      'B:cw',
+      'R:cw',
+      'R:cw',
+    ]);
     const texts = els.filter((e) => e.type === 'text');
     expect(texts).toHaveLength(3);
     expect(texts.some((t) => t.type === 'text' && t.text.startsWith('TODO'))).toBe(true);
@@ -101,7 +115,9 @@ describe('editing then exporting', () => {
     const d = Object.values(snap.diagrams)[0]!;
     const layerId = Object.keys(d.layers)[0]!;
     const byName = (n: string) =>
-      Object.values(d.elements).find((e) => e.type === 'variable' && snap.variables[e.variableId]!.name === n) as VariableNode;
+      Object.values(d.elements).find(
+        (e) => e.type === 'variable' && snap.variables[e.variableId]!.name === n,
+      ) as VariableNode;
     const trust = byName('Customer trust');
     const demand = byName('Customer demand for coffee');
     // Move a node, rename a variable, recolor, add a variable + link + loop, delete a node.
@@ -109,12 +125,30 @@ describe('editing then exporting', () => {
     renameVariable(doc, trust.variableId, 'Customer trust (3)');
     setStyle(doc, d.id, [demand.id], { textColor: '#2563eb' });
     const n = addVariableNode(doc, d.id, { name: 'Marketing spend', x: 1500, y: 200, layerId });
-    addElement(doc, d.id, { type: 'link', layerId, from: n, to: trust.id, control: { x: 1400, y: 230 }, polarity: '+' });
-    addElement(doc, d.id, { type: 'loop', layerId, x: 900, y: 900, r: 28, kind: 'B', label: 'B9', direction: 'ccw' });
+    addElement(doc, d.id, {
+      type: 'link',
+      layerId,
+      from: n,
+      to: trust.id,
+      control: { x: 1400, y: 230 },
+      polarity: '+',
+    });
+    addElement(doc, d.id, {
+      type: 'loop',
+      layerId,
+      x: 900,
+      y: 900,
+      r: 28,
+      kind: 'B',
+      label: 'B9',
+      direction: 'ccw',
+    });
     deleteElements(doc, d.id, [byName('Equipment costs per farmer').id]);
 
     const out = writeMdl(toSnapshot(doc)).text.replace(/\r\n/g, '\n');
-    expect(out).toContain('"Customer trust (3)"  = A FUNCTION OF( "Agroforestry digital traceability (6)",Marketing spend)');
+    expect(out).toContain(
+      '"Customer trust (3)"  = A FUNCTION OF( "Agroforestry digital traceability (6)",Marketing spend)',
+    );
     expect(out).toContain('Marketing spend  = A FUNCTION OF( )');
     expect(out).not.toContain('Equipment costs per farmer');
     expect(out).toContain(',|||37-99-235,');
@@ -127,10 +161,17 @@ describe('editing then exporting', () => {
     const els2 = all(s2);
     expect(Object.values(s2.variables)).toHaveLength(22); // 22 - 1 deleted + 1 new
     expect(els2.filter((e) => e.type === 'link')).toHaveLength(29); // 29 - 1 deleted + 1 new
-    const t2 = els2.find((e) => e.type === 'variable' && s2.variables[e.variableId]!.name === 'Customer trust (3)') as VariableNode;
+    const t2 = els2.find(
+      (e) => e.type === 'variable' && s2.variables[e.variableId]!.name === 'Customer trust (3)',
+    ) as VariableNode;
     expect(t2).toMatchObject({ x: 1222, y: 321 });
     // Ids are consecutive and links reference earlier objects.
-    const sketchLines = out.split('*View 1\n')[1]!.split('///---')[0]!.trim().split('\n').filter((l) => /^\d+,\d+,/.test(l));
+    const sketchLines = out
+      .split('*View 1\n')[1]!
+      .split('///---')[0]!
+      .trim()
+      .split('\n')
+      .filter((l) => /^\d+,\d+,/.test(l));
     sketchLines.forEach((l, k) => expect(l.split(',')[1]).toBe(String(k + 1)));
     for (const l of sketchLines.filter((x) => x.startsWith('1,'))) {
       const [, id, from, to] = l.split(',').map(Number);
@@ -149,7 +190,14 @@ describe('editing then exporting', () => {
     const a = addVariableNode(doc, d.id, { name: 'Births', x: 100, y: 100, layerId });
     const b = addVariableNode(doc, d.id, { name: 'Population, total', x: 300, y: 100, layerId });
     addElement(doc, d.id, { type: 'link', layerId, from: a, to: b, control: null, polarity: '+' });
-    const l = addElement(doc, d.id, { type: 'link', layerId, from: b, to: a, control: { x: 200, y: 160 }, polarity: '+' });
+    const l = addElement(doc, d.id, {
+      type: 'link',
+      layerId,
+      from: b,
+      to: a,
+      control: { x: 200, y: 160 },
+      polarity: '+',
+    });
     updateElement(doc, d.id, l, { polarity: '-' });
     addElement(doc, d.id, { type: 'text', layerId, x: 200, y: 300, w: 160, h: 40, text: 'Note' });
     const out = writeMdl(toSnapshot(doc));

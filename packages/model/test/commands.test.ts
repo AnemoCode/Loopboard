@@ -37,7 +37,14 @@ function setup() {
 
 const els = (doc: Y.Doc, diagramId: string) => toSnapshot(doc).diagrams[diagramId]!.elements;
 
-function link(doc: Y.Doc, diagramId: string, layerId: string, from: string, to: string, polarity: Link['polarity'] = '+') {
+function link(
+  doc: Y.Doc,
+  diagramId: string,
+  layerId: string,
+  from: string,
+  to: string,
+  polarity: Link['polarity'] = '+',
+) {
   return addElement(doc, diagramId, { type: 'link', layerId, from, to, control: null, polarity });
 }
 
@@ -90,7 +97,15 @@ describe('deleting', () => {
   it('moves elements to another layer when deleting a layer', () => {
     const { doc, diagramId, layerId } = setup();
     const l2 = addLayer(doc, diagramId, 'Notes');
-    const t = addElement(doc, diagramId, { type: 'text', layerId: l2, x: 0, y: 0, w: 100, h: 20, text: 'hi' });
+    const t = addElement(doc, diagramId, {
+      type: 'text',
+      layerId: l2,
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 20,
+      text: 'hi',
+    });
     deleteLayer(doc, diagramId, l2, layerId);
     expect(els(doc, diagramId)[t]!.layerId).toBe(layerId);
   });
@@ -101,7 +116,14 @@ describe('moving', () => {
     const { doc, diagramId, layerId } = setup();
     const a = addVariableNode(doc, diagramId, { name: 'A', x: 0, y: 0, layerId });
     const b = addVariableNode(doc, diagramId, { name: 'B', x: 100, y: 0, layerId });
-    const l = addElement(doc, diagramId, { type: 'link', layerId, from: a, to: b, control: { x: 50, y: 20 }, polarity: '+' });
+    const l = addElement(doc, diagramId, {
+      type: 'link',
+      layerId,
+      from: a,
+      to: b,
+      control: { x: 50, y: 20 },
+      polarity: '+',
+    });
     moveElements(doc, diagramId, [{ id: b, dx: 100, dy: 0 }]);
     expect((els(doc, diagramId)[l] as Link).control).toEqual({ x: 100, y: 40 });
     moveElements(doc, diagramId, [
@@ -115,8 +137,13 @@ describe('moving', () => {
 describe('ordering, style, copy/paste, diagrams', () => {
   it('reorders z within a layer', () => {
     const { doc, diagramId, layerId } = setup();
-    const ids = [0, 1, 2].map((i) => addElement(doc, diagramId, { type: 'text', layerId, x: i, y: 0, w: 10, h: 10, text: `${i}` }));
-    const order = () => Object.values(els(doc, diagramId)).sort((x, y) => (x.z < y.z ? -1 : 1)).map((e) => e.id);
+    const ids = [0, 1, 2].map((i) =>
+      addElement(doc, diagramId, { type: 'text', layerId, x: i, y: 0, w: 10, h: 10, text: `${i}` }),
+    );
+    const order = () =>
+      Object.values(els(doc, diagramId))
+        .sort((x, y) => (x.z < y.z ? -1 : 1))
+        .map((e) => e.id);
     reorderElements(doc, diagramId, [ids[0]!], 'front');
     expect(order()).toEqual([ids[1], ids[2], ids[0]]);
     reorderElements(doc, diagramId, [ids[0]!], 'backward');
@@ -143,7 +170,9 @@ describe('ordering, style, copy/paste, diagrams', () => {
     const created = pasteElements(doc, diagramId, copied, layerId, 20, 20);
     expect(created).toHaveLength(3);
     const e = els(doc, diagramId);
-    const newLink = Object.values(e).filter((x) => x.type === 'link').find((x) => created.includes(x.id)) as Link;
+    const newLink = Object.values(e)
+      .filter((x) => x.type === 'link')
+      .find((x) => created.includes(x.id)) as Link;
     expect(created).toContain(newLink.from);
     expect(newLink.polarity).toBe('-');
   });
@@ -162,7 +191,11 @@ describe('ordering, style, copy/paste, diagrams', () => {
     addVariableNode(other, od, { name: 'New', x: 0, y: 0, layerId: ol });
     const created = appendSnapshot(doc, toSnapshot(other));
     expect(created).toHaveLength(1);
-    expect(Object.values(toSnapshot(doc).variables).map((v) => v.name).sort()).toEqual(['A', 'New']);
+    expect(
+      Object.values(toSnapshot(doc).variables)
+        .map((v) => v.name)
+        .sort(),
+    ).toEqual(['A', 'New']);
     expect(snapshotSchema.safeParse(toSnapshot(doc)).success).toBe(true);
   });
 });
@@ -203,16 +236,27 @@ describe('concurrency', () => {
     | { k: 'layer' };
 
   const opArb: fc.Arbitrary<Op> = fc.oneof(
-    fc.record({ k: fc.constant('add' as const), name: fc.constantFrom('A', 'B', 'C', 'D'), x: fc.integer({ min: 0, max: 500 }) }),
+    fc.record({
+      k: fc.constant('add' as const),
+      name: fc.constantFrom('A', 'B', 'C', 'D'),
+      x: fc.integer({ min: 0, max: 500 }),
+    }),
     fc.record({ k: fc.constant('link' as const), i: fc.nat(20), j: fc.nat(20) }),
     fc.record({ k: fc.constant('del' as const), i: fc.nat(20) }),
-    fc.record({ k: fc.constant('move' as const), i: fc.nat(20), d: fc.integer({ min: -50, max: 50 }) }),
+    fc.record({
+      k: fc.constant('move' as const),
+      i: fc.nat(20),
+      d: fc.integer({ min: -50, max: 50 }),
+    }),
     fc.record({ k: fc.constant('layer' as const) }),
   );
 
   function apply(doc: Y.Doc, diagramId: string, op: Op) {
     const s = toSnapshot(doc).diagrams[diagramId]!;
-    const nodes = Object.values(s.elements).filter((e) => e.type === 'variable').map((e) => e.id).sort();
+    const nodes = Object.values(s.elements)
+      .filter((e) => e.type === 'variable')
+      .map((e) => e.id)
+      .sort();
     const layers = Object.keys(s.layers).sort();
     const pick = (i: number) => nodes[i % Math.max(nodes.length, 1)];
     switch (op.k) {
@@ -222,7 +266,15 @@ describe('concurrency', () => {
       case 'link': {
         const a = pick(op.i);
         const b = pick(op.j);
-        if (a && b && a !== b) addElement(doc, diagramId, { type: 'link', layerId: layers[0]!, from: a, to: b, control: null, polarity: '+' });
+        if (a && b && a !== b)
+          addElement(doc, diagramId, {
+            type: 'link',
+            layerId: layers[0]!,
+            from: a,
+            to: b,
+            control: null,
+            polarity: '+',
+          });
         break;
       }
       case 'del': {
@@ -244,47 +296,50 @@ describe('concurrency', () => {
 
   it('replicas converge to a valid document under concurrent edits', () => {
     fc.assert(
-      fc.property(fc.array(fc.array(opArb, { maxLength: 12 }), { minLength: 3, maxLength: 3 }), (scripts) => {
-        const origin = new Y.Doc();
-        initDoc(origin);
-        const diagramId = Object.keys(toSnapshot(origin).diagrams)[0]!;
-        const base = Y.encodeStateAsUpdate(origin);
-        const replicas = scripts.map(() => {
-          const d = new Y.Doc();
-          Y.applyUpdate(d, base);
-          return d;
-        });
-        // Offline phase: every replica edits independently.
-        replicas.forEach((d, i) => scripts[i]!.forEach((op) => apply(d, diagramId, op)));
-        // Sync everything in every direction.
-        const updates = replicas.map((d) => Y.encodeStateAsUpdate(d));
-        replicas.forEach((d) => updates.forEach((u) => Y.applyUpdate(d, u)));
-        // Each replica repairs independently, then sync again.
-        replicas.forEach((d) => repairDoc(d));
-        const updates2 = replicas.map((d) => Y.encodeStateAsUpdate(d));
-        replicas.forEach((d) => updates2.forEach((u) => Y.applyUpdate(d, u)));
-        const snaps = replicas.map((d) => canonical(toSnapshot(d)));
-        expect(new Set(snaps).size).toBe(1);
-        const snap = toSnapshot(replicas[0]!);
-        expect(snapshotSchema.safeParse(snap).success).toBe(true);
-        // Invariants
-        const names = Object.values(snap.variables).map((v) => v.name.toLowerCase());
-        expect(new Set(names).size).toBe(names.length);
-        for (const d of Object.values(snap.diagrams)) {
-          expect(Object.keys(d.layers).length).toBeGreaterThan(0);
-          for (const e of Object.values(d.elements)) {
-            expect(d.layers[e.layerId]).toBeDefined();
-            if (e.type === 'link') {
-              expect(d.elements[e.from]?.type).toBe('variable');
-              expect(d.elements[e.to]?.type).toBe('variable');
+      fc.property(
+        fc.array(fc.array(opArb, { maxLength: 12 }), { minLength: 3, maxLength: 3 }),
+        (scripts) => {
+          const origin = new Y.Doc();
+          initDoc(origin);
+          const diagramId = Object.keys(toSnapshot(origin).diagrams)[0]!;
+          const base = Y.encodeStateAsUpdate(origin);
+          const replicas = scripts.map(() => {
+            const d = new Y.Doc();
+            Y.applyUpdate(d, base);
+            return d;
+          });
+          // Offline phase: every replica edits independently.
+          replicas.forEach((d, i) => scripts[i]!.forEach((op) => apply(d, diagramId, op)));
+          // Sync everything in every direction.
+          const updates = replicas.map((d) => Y.encodeStateAsUpdate(d));
+          replicas.forEach((d) => updates.forEach((u) => Y.applyUpdate(d, u)));
+          // Each replica repairs independently, then sync again.
+          replicas.forEach((d) => repairDoc(d));
+          const updates2 = replicas.map((d) => Y.encodeStateAsUpdate(d));
+          replicas.forEach((d) => updates2.forEach((u) => Y.applyUpdate(d, u)));
+          const snaps = replicas.map((d) => canonical(toSnapshot(d)));
+          expect(new Set(snaps).size).toBe(1);
+          const snap = toSnapshot(replicas[0]!);
+          expect(snapshotSchema.safeParse(snap).success).toBe(true);
+          // Invariants
+          const names = Object.values(snap.variables).map((v) => v.name.toLowerCase());
+          expect(new Set(names).size).toBe(names.length);
+          for (const d of Object.values(snap.diagrams)) {
+            expect(Object.keys(d.layers).length).toBeGreaterThan(0);
+            for (const e of Object.values(d.elements)) {
+              expect(d.layers[e.layerId]).toBeDefined();
+              if (e.type === 'link') {
+                expect(d.elements[e.from]?.type).toBe('variable');
+                expect(d.elements[e.to]?.type).toBe('variable');
+              }
+              if (e.type === 'variable') expect(snap.variables[e.variableId]).toBeDefined();
             }
-            if (e.type === 'variable') expect(snap.variables[e.variableId]).toBeDefined();
           }
-        }
-        // Repair is idempotent once converged.
-        expect(repairDoc(replicas[0]!)).toBe(false);
-        expect(roots(replicas[0]!).diagrams.size).toBeGreaterThan(0);
-      }),
+          // Repair is idempotent once converged.
+          expect(repairDoc(replicas[0]!)).toBe(false);
+          expect(roots(replicas[0]!).diagrams.size).toBeGreaterThan(0);
+        },
+      ),
       { numRuns: 150 },
     );
   });

@@ -46,7 +46,8 @@ export function splitOutsideQuotes(s: string, sep: string): string[] {
 
 export function unquote(name: string): string {
   const t = name.trim();
-  if (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) return t.slice(1, -1).replace(/\\(.)/g, '$1');
+  if (t.length >= 2 && t.startsWith('"') && t.endsWith('"'))
+    return t.slice(1, -1).replace(/\\(.)/g, '$1');
   return t;
 }
 
@@ -57,7 +58,8 @@ export function quoteName(name: string): string {
 }
 
 /** Vensim treats names case-insensitively and `_` like a space. */
-export const vensimKey = (name: string): string => name.trim().replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+export const vensimKey = (name: string): string =>
+  name.trim().replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase();
 
 /** `r-g-b` → `#rrggbb`; `-1--1--1` (default) → null. */
 export function rgbToHex(rgb: string | undefined): string | null {

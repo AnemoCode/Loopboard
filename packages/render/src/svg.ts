@@ -4,7 +4,10 @@ import { FONT_STACKS, PDF_FONTS } from './text.js';
 import { lightTheme, type Theme } from './theme.js';
 
 export const escapeXml = (s: string): string =>
-  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  s.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+  );
 
 export function dashArray(dash: Dash | undefined, width: number): string | undefined {
   if (dash === 'dashed') return `${width * 4} ${width * 3}`;
@@ -40,7 +43,9 @@ export function primToSvg(p: Prim, fontMode: FontMode = 'web'): string {
         (p.font.bold ? ' font-weight="bold"' : '') +
         (p.font.italic ? ' font-style="italic"' : '') +
         ` fill="${escapeXml(p.fill)}" text-anchor="${p.anchor}"`;
-      const spans = p.lines.map((l) => `<tspan x="${p.x}" y="${l.y}">${escapeXml(l.text)}</tspan>`).join('');
+      const spans = p.lines
+        .map((l) => `<tspan x="${p.x}" y="${l.y}">${escapeXml(l.text)}</tspan>`)
+        .join('');
       return `<text${attrs} xml:space="preserve">${spans}</text>`;
     }
   }
@@ -65,7 +70,11 @@ export interface SvgResult {
 }
 
 /** Render one diagram of a project to a standalone SVG document. Pure and deterministic. */
-export function renderDiagramSvg(snap: ProjectSnapshot, diagramId: string, opts: SvgOptions = {}): SvgResult {
+export function renderDiagramSvg(
+  snap: ProjectSnapshot,
+  diagramId: string,
+  opts: SvgOptions = {},
+): SvgResult {
   const theme = opts.theme ?? lightTheme;
   const pad = opts.padding ?? 32;
   const diagram = snap.diagrams[diagramId];
@@ -74,7 +83,9 @@ export function renderDiagramSvg(snap: ProjectSnapshot, diagramId: string, opts:
   if (opts.only) {
     const only = opts.only;
     elements = Object.fromEntries(
-      Object.entries(elements).filter(([id, el]) => only.has(id) || (el.type === 'link' && only.has(el.from) && only.has(el.to))),
+      Object.entries(elements).filter(
+        ([id, el]) => only.has(id) || (el.type === 'link' && only.has(el.from) && only.has(el.to)),
+      ),
     );
   }
   const layout = layoutDiagram(
@@ -90,12 +101,19 @@ export function renderDiagramSvg(snap: ProjectSnapshot, diagramId: string, opts:
   const height = Math.ceil(b.h + pad * 2);
   const bg = opts.background === undefined ? theme.background : opts.background;
   const body = layout.order
-    .map((id) => layout.byId.get(id)!.prims.map((p) => primToSvg(p, opts.fontMode)).join(''))
+    .map((id) =>
+      layout.byId
+        .get(id)!
+        .prims.map((p) => primToSvg(p, opts.fontMode))
+        .join(''),
+    )
     .join('\n');
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" width="${width}" height="${height}">\n` +
     (opts.title ? `<title>${escapeXml(opts.title)}</title>\n` : '') +
-    (bg ? `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${escapeXml(bg)}"/>\n` : '') +
+    (bg
+      ? `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${escapeXml(bg)}"/>\n`
+      : '') +
     body +
     '\n</svg>\n';
   return { svg, width, height };

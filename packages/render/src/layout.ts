@@ -80,7 +80,14 @@ export function fontOf(style: Style | undefined, size = DEFAULT_FONT_SIZE): Font
 }
 
 /** Vertically centred text block around (x, cy). */
-function textBlock(lines: string[], font: Font, x: number, cy: number, anchor: 'start' | 'middle' | 'end', fill: string): Prim {
+function textBlock(
+  lines: string[],
+  font: Font,
+  x: number,
+  cy: number,
+  anchor: 'start' | 'middle' | 'end',
+  fill: string,
+): Prim {
   const lh = font.size * LINE_HEIGHT;
   const top = cy - (lines.length * lh) / 2;
   return {
@@ -93,10 +100,12 @@ function textBlock(lines: string[], font: Font, x: number, cy: number, anchor: '
   };
 }
 
-const textWidth = (lines: string[], font: Font) => Math.max(0, ...lines.map((l) => measureText(l, font)));
+const textWidth = (lines: string[], font: Font) =>
+  Math.max(0, ...lines.map((l) => measureText(l, font)));
 
 /** Resolve a fill: undefined → theme default, null → none. */
-const fillOf = (v: string | null | undefined, dflt: string | undefined) => (v === null ? undefined : (v ?? dflt));
+const fillOf = (v: string | null | undefined, dflt: string | undefined) =>
+  v === null ? undefined : (v ?? dflt);
 
 function unionBox(boxes: Box[]): Box {
   const x0 = Math.min(...boxes.map((b) => b.x));
@@ -110,7 +119,8 @@ const pointBox = (pts: Point[], pad = 0): Box =>
   unionBox(pts.map((p) => ({ x: p.x - pad, y: p.y - pad, w: pad * 2, h: pad * 2 })));
 
 export function insideBoundary(b: Boundary, p: Point, gap = 0): boolean {
-  if (b.kind === 'rect') return Math.abs(p.x - b.cx) <= b.hw + gap && Math.abs(p.y - b.cy) <= b.hh + gap;
+  if (b.kind === 'rect')
+    return Math.abs(p.x - b.cx) <= b.hw + gap && Math.abs(p.y - b.cy) <= b.hh + gap;
   const rx = b.rx + gap;
   const ry = b.ry + gap;
   const dx = (p.x - b.cx) / rx;
@@ -144,7 +154,10 @@ function layoutVariable(el: VariableNode, name: string, theme: Theme): ElementLa
     hw = Math.max(tw, 16) / 2 + 3;
     hh = th / 2 + 2;
   }
-  const stroke = el.style?.stroke === null ? undefined : (el.style?.stroke ?? (hasForm ? theme.nodeStroke : undefined));
+  const stroke =
+    el.style?.stroke === null
+      ? undefined
+      : (el.style?.stroke ?? (hasForm ? theme.nodeStroke : undefined));
   const fill = fillOf(el.style?.fill, undefined);
   const paint: Paint = { stroke, fill, width: el.style?.strokeWidth ?? 1.25, dash: el.style?.dash };
   const box = { x: el.x - hw, y: el.y - hh, w: hw * 2, h: hh * 2 };
@@ -154,14 +167,24 @@ function layoutVariable(el: VariableNode, name: string, theme: Theme): ElementLa
     hh *= 1.2;
     prims.push({ t: 'ellipse', cx: el.x, cy: el.y, rx: r1(hw), ry: r1(hh), ...paint });
   } else if (hasForm || stroke || fill) {
-    prims.push({ t: 'rect', x: r1(el.x - hw), y: r1(el.y - hh), w: r1(hw * 2), h: r1(hh * 2), rx: el.form === 'rounded' ? Math.min(hh, 12) : 2, ...paint });
+    prims.push({
+      t: 'rect',
+      x: r1(el.x - hw),
+      y: r1(el.y - hh),
+      w: r1(hw * 2),
+      h: r1(hh * 2),
+      rx: el.form === 'rounded' ? Math.min(hh, 12) : 2,
+      ...paint,
+    });
   }
   const align = el.style?.align ?? 'center';
   const anchor = align === 'left' ? 'start' : align === 'right' ? 'end' : 'middle';
   const tx = align === 'left' ? el.x - tw / 2 : align === 'right' ? el.x + tw / 2 : el.x;
   prims.push(textBlock(lines, font, tx, el.y, anchor, textColor));
   const boundary: Boundary =
-    el.form === 'ellipse' ? { kind: 'ellipse', cx: el.x, cy: el.y, rx: hw, ry: hh } : { kind: 'rect', cx: el.x, cy: el.y, hw, hh };
+    el.form === 'ellipse'
+      ? { kind: 'ellipse', cx: el.x, cy: el.y, rx: hw, ry: hh }
+      : { kind: 'rect', cx: el.x, cy: el.y, hw, hh };
   const bbox = el.form === 'ellipse' ? { x: el.x - hw, y: el.y - hh, w: hw * 2, h: hh * 2 } : box;
   return {
     id: el.id,
@@ -169,7 +192,12 @@ function layoutVariable(el: VariableNode, name: string, theme: Theme): ElementLa
     prims,
     bbox,
     boundary,
-    text: { box: { x: el.x - wrapW / 2, y: el.y - th / 2, w: wrapW, h: th }, font, align, value: name },
+    text: {
+      box: { x: el.x - wrapW / 2, y: el.y - th / 2, w: wrapW, h: th },
+      font,
+      align,
+      value: name,
+    },
   };
 }
 
@@ -183,22 +211,42 @@ function layoutShape(el: ShapeElement, theme: Theme): ElementLayout {
     dash: el.style?.dash,
   };
   const prims: Prim[] = [];
-  if (el.shape === 'ellipse') prims.push({ t: 'ellipse', cx: el.x, cy: el.y, rx: hw, ry: hh, ...paint });
+  if (el.shape === 'ellipse')
+    prims.push({ t: 'ellipse', cx: el.x, cy: el.y, rx: hw, ry: hh, ...paint });
   else if (el.shape === 'diamond')
-    prims.push({ t: 'path', d: `M${el.x} ${el.y - hh}L${el.x + hw} ${el.y}L${el.x} ${el.y + hh}L${el.x - hw} ${el.y}Z`, ...paint });
-  else prims.push({ t: 'rect', x: el.x - hw, y: el.y - hh, w: el.w, h: el.h, rx: el.shape === 'rounded' ? Math.min(16, hh) : 0, ...paint });
+    prims.push({
+      t: 'path',
+      d: `M${el.x} ${el.y - hh}L${el.x + hw} ${el.y}L${el.x} ${el.y + hh}L${el.x - hw} ${el.y}Z`,
+      ...paint,
+    });
+  else
+    prims.push({
+      t: 'rect',
+      x: el.x - hw,
+      y: el.y - hh,
+      w: el.w,
+      h: el.h,
+      rx: el.shape === 'rounded' ? Math.min(16, hh) : 0,
+      ...paint,
+    });
   const font = fontOf(el.style, 13);
   const value = el.text ?? '';
   const inner = Math.max(10, el.w - 20);
   const lines = value ? wrapText(value, font, inner) : [];
-  if (lines.length) prims.push(textBlock(lines, font, el.x, el.y, 'middle', el.style?.textColor ?? theme.text));
+  if (lines.length)
+    prims.push(textBlock(lines, font, el.x, el.y, 'middle', el.style?.textColor ?? theme.text));
   const th = Math.max(1, lines.length) * font.size * LINE_HEIGHT;
   return {
     id: el.id,
     type: 'shape',
     prims,
     bbox: { x: el.x - hw, y: el.y - hh, w: el.w, h: el.h },
-    text: { box: { x: el.x - inner / 2, y: el.y - th / 2, w: inner, h: th }, font, align: 'center', value },
+    text: {
+      box: { x: el.x - inner / 2, y: el.y - th / 2, w: inner, h: th },
+      font,
+      align: 'center',
+      value,
+    },
   };
 }
 
@@ -215,8 +263,20 @@ function layoutText(el: TextElement, theme: Theme): ElementLayout {
   const stroke = el.style?.stroke ?? undefined;
   const fill = el.style?.fill ?? undefined;
   if (stroke || fill)
-    prims.push({ t: 'rect', x: x0 - 6, y: el.y - h / 2 - 4, w: el.w + 12, h: h + 8, rx: 4, stroke, fill, width: el.style?.strokeWidth ?? 1, dash: el.style?.dash });
-  if (el.text) prims.push(textBlock(lines, font, tx, el.y, anchor, el.style?.textColor ?? theme.text));
+    prims.push({
+      t: 'rect',
+      x: x0 - 6,
+      y: el.y - h / 2 - 4,
+      w: el.w + 12,
+      h: h + 8,
+      rx: 4,
+      stroke,
+      fill,
+      width: el.style?.strokeWidth ?? 1,
+      dash: el.style?.dash,
+    });
+  if (el.text)
+    prims.push(textBlock(lines, font, tx, el.y, anchor, el.style?.textColor ?? theme.text));
   return {
     id: el.id,
     type: 'text',
@@ -226,7 +286,13 @@ function layoutText(el: TextElement, theme: Theme): ElementLayout {
   };
 }
 
-function arrowHead(tip: Point, dir: Point, size: number, color: string, kind: 'arrow' | 'open'): Prim {
+function arrowHead(
+  tip: Point,
+  dir: Point,
+  size: number,
+  color: string,
+  kind: 'arrow' | 'open',
+): Prim {
   const bx = tip.x - dir.x * size;
   const by = tip.y - dir.y * size;
   const nx = -dir.y * size * 0.42;
@@ -250,8 +316,11 @@ function layoutLoop(el: LoopMarker, theme: Theme): ElementLayout {
   const end = p(a0 + sweep);
   const head = Math.max(6, rr * 0.55);
   // Shorten the arc so the line ends under the arrowhead.
-  const endTrim = p(a0 + sweep - (cw ? 1 : -1) * (head * 0.6) / rr);
-  const tangent = { x: -Math.sin(a0 + sweep) * (cw ? 1 : -1), y: Math.cos(a0 + sweep) * (cw ? 1 : -1) };
+  const endTrim = p(a0 + sweep - ((cw ? 1 : -1) * (head * 0.6)) / rr);
+  const tangent = {
+    x: -Math.sin(a0 + sweep) * (cw ? 1 : -1),
+    y: Math.cos(a0 + sweep) * (cw ? 1 : -1),
+  };
   const prims: Prim[] = [
     {
       t: 'path',
@@ -260,7 +329,13 @@ function layoutLoop(el: LoopMarker, theme: Theme): ElementLayout {
       width,
       cap: 'round',
     },
-    arrowHead({ x: end.x + tangent.x * head * 0.35, y: end.y + tangent.y * head * 0.35 }, tangent, head, color, 'arrow'),
+    arrowHead(
+      { x: end.x + tangent.x * head * 0.35, y: end.y + tangent.y * head * 0.35 },
+      tangent,
+      head,
+      color,
+      'arrow',
+    ),
   ];
   const font: Font = { ...fontOf(el.style, Math.round(rr * 0.85)), bold: el.style?.bold ?? true };
   const textColor = el.style?.textColor ?? color;
@@ -363,12 +438,22 @@ function selfLoop(b: Boundary): { d: string; tip: Point; dir: Point; mid: Point 
   const c2 = { x: ex + 46, y: ey - 10 };
   const d = `M${r1(sx)} ${r1(top)}C${r1(c1.x)} ${r1(c1.y)} ${r1(c2.x)} ${r1(c2.y)} ${r1(ex)} ${r1(ey)}`;
   const dl = Math.hypot(ex - c2.x, ey - c2.y);
-  return { d, tip: { x: ex, y: ey }, dir: { x: (ex - c2.x) / dl, y: (ey - c2.y) / dl }, mid: { x: ex + 18, y: top - 18 } };
+  return {
+    d,
+    tip: { x: ex, y: ey },
+    dir: { x: (ex - c2.x) / dl, y: (ey - c2.y) / dl },
+    mid: { x: ex + 18, y: top - 18 },
+  };
 }
 
 export const POLARITY_GLYPH: Record<string, string> = { '+': '+', '-': '–', '?': '?' };
 
-function layoutLink(el: Link, from: ElementLayout | undefined, to: ElementLayout | undefined, theme: Theme): ElementLayout | null {
+function layoutLink(
+  el: Link,
+  from: ElementLayout | undefined,
+  to: ElementLayout | undefined,
+  theme: Theme,
+): ElementLayout | null {
   const fb = from?.boundary;
   const tb = to?.boundary;
   if (!fb || !tb) return null;
@@ -383,8 +468,24 @@ function layoutLink(el: Link, from: ElementLayout | undefined, to: ElementLayout
     const s = selfLoop(fb);
     prims.push({ t: 'path', d: s.d, stroke: color, width, dash: el.style?.dash, cap: 'round' });
     if (head !== 'none') prims.push(arrowHead(s.tip, s.dir, headSize, color, head));
-    if (el.polarity) prims.push(textBlock([POLARITY_GLYPH[el.polarity]!], polFont, s.mid.x + 8, s.mid.y - 8, 'middle', color));
-    return { id: el.id, type: 'link', prims, bbox: pointBox([s.tip, s.mid, { x: fb.cx, y: fb.cy - 60 }], 12), link: { d: s.d, start: s.tip, end: s.tip, handle: s.mid } };
+    if (el.polarity)
+      prims.push(
+        textBlock(
+          [POLARITY_GLYPH[el.polarity]!],
+          polFont,
+          s.mid.x + 8,
+          s.mid.y - 8,
+          'middle',
+          color,
+        ),
+      );
+    return {
+      id: el.id,
+      type: 'link',
+      prims,
+      bbox: pointBox([s.tip, s.mid, { x: fb.cx, y: fb.cy - 60 }], 12),
+      link: { d: s.d, start: s.tip, end: s.tip, handle: s.mid },
+    };
   }
 
   const p0 = boundaryCenter(fb);
@@ -424,14 +525,22 @@ function layoutLink(el: Link, from: ElementLayout | undefined, to: ElementLayout
       const cy = m.y + tg.y * o;
       return `M${r1(cx - n.x * 7)} ${r1(cy - n.y * 7)}L${r1(cx + n.x * 7)} ${r1(cy + n.y * 7)}`;
     });
-    prims.push({ t: 'path', d: segs.join(''), stroke: color, width: Math.max(1.25, width), cap: 'butt' });
+    prims.push({
+      t: 'path',
+      d: segs.join(''),
+      stroke: color,
+      width: Math.max(1.25, width),
+      cap: 'butt',
+    });
   }
   if (el.label) {
     const m = curve.at(tm);
     const n = curve.outward(tm);
     const lf: Font = { ...fontOf(el.style, 11), bold: false };
     const pos = { x: m.x - n.x * 12, y: m.y - n.y * 12 };
-    prims.push(textBlock([el.label], lf, pos.x, pos.y, 'middle', el.style?.textColor ?? theme.mutedText));
+    prims.push(
+      textBlock([el.label], lf, pos.x, pos.y, 'middle', el.style?.textColor ?? theme.mutedText),
+    );
     const lw = measureText(el.label, lf) / 2;
     extra.push({ x: pos.x - lw, y: pos.y }, { x: pos.x + lw, y: pos.y });
   }
@@ -466,7 +575,8 @@ export class LayoutCache {
   private entries = new Map<string, { deps: unknown[]; layout: ElementLayout | null }>();
   get(id: string, deps: unknown[], make: () => ElementLayout | null): ElementLayout | null {
     const hit = this.entries.get(id);
-    if (hit && hit.deps.length === deps.length && hit.deps.every((d, i) => d === deps[i])) return hit.layout;
+    if (hit && hit.deps.length === deps.length && hit.deps.every((d, i) => d === deps[i]))
+      return hit.layout;
     const layout = make();
     this.entries.set(id, { deps, layout });
     return layout;
@@ -476,7 +586,11 @@ export class LayoutCache {
   }
 }
 
-export function paintOrder(elements: Record<string, DiagramElement>, layers: Record<string, Layer>, includeHidden = false): DiagramElement[] {
+export function paintOrder(
+  elements: Record<string, DiagramElement>,
+  layers: Record<string, Layer>,
+  includeHidden = false,
+): DiagramElement[] {
   const sortedLayers = Object.values(layers).sort(byKey((l) => l.order));
   const rank = new Map(sortedLayers.map((l, i) => [l.id, i]));
   return Object.values(elements)
@@ -484,10 +598,19 @@ export function paintOrder(elements: Record<string, DiagramElement>, layers: Rec
       const l = layers[e.layerId];
       return includeHidden || !l || l.visible;
     })
-    .sort((a, b) => (rank.get(a.layerId) ?? 0) - (rank.get(b.layerId) ?? 0) || byKey<DiagramElement>((e) => e.z)(a, b));
+    .sort(
+      (a, b) =>
+        (rank.get(a.layerId) ?? 0) - (rank.get(b.layerId) ?? 0) ||
+        byKey<DiagramElement>((e) => e.z)(a, b),
+    );
 }
 
-export function layoutDiagram(input: LayoutInput, theme: Theme, cache = new LayoutCache(), includeHidden = false): DiagramLayout {
+export function layoutDiagram(
+  input: LayoutInput,
+  theme: Theme,
+  cache = new LayoutCache(),
+  includeHidden = false,
+): DiagramLayout {
   const byId = new Map<string, ElementLayout>();
   const all = Object.values(input.elements);
   // Nodes first (links depend on their boundaries), regardless of visibility.
@@ -495,7 +618,9 @@ export function layoutDiagram(input: LayoutInput, theme: Theme, cache = new Layo
     if (el.type === 'link') continue;
     const layout =
       el.type === 'variable'
-        ? cache.get(el.id, [el, input.variableName(el.variableId), theme], () => layoutVariable(el, input.variableName(el.variableId), theme))
+        ? cache.get(el.id, [el, input.variableName(el.variableId), theme], () =>
+            layoutVariable(el, input.variableName(el.variableId), theme),
+          )
         : el.type === 'loop'
           ? cache.get(el.id, [el, theme], () => layoutLoop(el, theme))
           : el.type === 'shape'

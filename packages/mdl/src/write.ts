@@ -1,4 +1,11 @@
-import { byKey, type Diagram, type DiagramElement, type Link, type ProjectSnapshot, type Variable } from '@cld/model';
+import {
+  byKey,
+  type Diagram,
+  type DiagramElement,
+  type Link,
+  type ProjectSnapshot,
+  type Variable,
+} from '@cld/model';
 import { causesKey, parseEquation, polarityFromCode } from './parse.js';
 import { fontFieldColor, hexToRgb, quoteName, rgbToHex, splitFields, unquote } from './util.js';
 
@@ -38,7 +45,8 @@ TIME STEP  = 1
 `;
 const DEFAULT_SKETCH_HEADER =
   '\\\\\\---/// Sketch information - do not modify anything except names\nV300  Do not put anything below this section - it will be ignored\n';
-const DEFAULT_VIEW_HEADER = '$-1--1--1,0,|12||-1--1--1|-1--1--1|-1--1--1|-1--1--1|-1--1--1|96,96,100,0';
+const DEFAULT_VIEW_HEADER =
+  '$-1--1--1,0,|12||-1--1--1|-1--1--1|-1--1--1|-1--1--1|-1--1--1|96,96,100,0';
 const DEFAULT_SETTINGS = `///---\\\\\\
 :L<%^E!@
 5:Time
@@ -72,9 +80,68 @@ const DEFAULT_SETTINGS = `///---\\\\\\
 104:Vensim Sans|12||0-0-0|0-0-0|-1--1--1|0-0-255|192-192-192|-1--1--1
 `;
 
-const VAR_TEMPLATE = ['10', '0', '', '0', '0', '0', '0', '8', '3', '0', '0', '-1', '0', '0', '0', '0', '0', '0', '0', '0', '0'];
-const LINK_TEMPLATE = ['1', '0', '0', '0', '0', '0', '0', '0', '0', '192', '0', '-1--1--1', '', '1'];
-const COMMENT_TEMPLATE = ['12', '0', '0', '0', '0', '0', '0', '8', '3', '0', '0', '-1', '0', '0', '0', '0', '0', '0', '0', '0', '0'];
+const VAR_TEMPLATE = [
+  '10',
+  '0',
+  '',
+  '0',
+  '0',
+  '0',
+  '0',
+  '8',
+  '3',
+  '0',
+  '0',
+  '-1',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+];
+const LINK_TEMPLATE = [
+  '1',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '192',
+  '0',
+  '-1--1--1',
+  '',
+  '1',
+];
+const COMMENT_TEMPLATE = [
+  '12',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '8',
+  '3',
+  '0',
+  '0',
+  '-1',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+  '0',
+];
 
 const round = (n: number) => String(Math.round(n));
 
@@ -123,7 +190,12 @@ export function writeMdl(snap: ProjectSnapshot): MdlWriteResult {
   return { text, warnings: [...warnings] };
 }
 
-function equationFor(v: Variable, causes: Map<string, Set<string>>, snap: ProjectSnapshot, warnings: Set<string>): string {
+function equationFor(
+  v: Variable,
+  causes: Map<string, Set<string>>,
+  snap: ProjectSnapshot,
+  warnings: Set<string>,
+): string {
   const names = [...(causes.get(v.id) ?? [])]
     .map((id) => snap.variables[id]?.name)
     .filter((n): n is string => !!n)
@@ -131,14 +203,22 @@ function equationFor(v: Variable, causes: Map<string, Set<string>>, snap: Projec
   const raw = v.mdl?.equation;
   if (raw) {
     const info = parseEquation(raw);
-    const sameMeta = info && info.name === v.name && info.units === (v.units ?? '') && info.notes === (v.notes ?? '');
-    if (sameMeta && (v.mdl?.causesKey === undefined || v.mdl.causesKey === causesKey(names))) return raw;
-    if (info && v.mdl?.causesKey === undefined) warnings.add(`The equation of "${v.name}" was replaced because the variable changed.`);
+    const sameMeta =
+      info &&
+      info.name === v.name &&
+      info.units === (v.units ?? '') &&
+      info.notes === (v.notes ?? '');
+    if (sameMeta && (v.mdl?.causesKey === undefined || v.mdl.causesKey === causesKey(names)))
+      return raw;
+    if (info && v.mdl?.causesKey === undefined)
+      warnings.add(`The equation of "${v.name}" was replaced because the variable changed.`);
   }
   const units = v.units ?? '';
   const notes = v.notes ?? '';
   const head = `${quoteName(v.name)}  = A FUNCTION OF( ${names.map(quoteName).join(',')})\n`;
-  return units || notes ? `${head}\t~\t${units}\n\t~\t${notes}\n\t|\n\n` : `${head}\t~\t\n\t~\t\t|\n\n`;
+  return units || notes
+    ? `${head}\t~\t${units}\n\t~\t${notes}\n\t|\n\n`
+    : `${head}\t~\t\n\t~\t\t|\n\n`;
 }
 
 interface Item {
@@ -148,7 +228,10 @@ interface Item {
 }
 
 function viewFor(d: Diagram, snap: ProjectSnapshot, warnings: Set<string>): string {
-  const viewLine = d.mdl?.viewLine && d.mdl.viewLine.slice(1).trim() === d.name ? d.mdl.viewLine : `*${d.name.replace(/[\r\n]/g, ' ')}`;
+  const viewLine =
+    d.mdl?.viewLine && d.mdl.viewLine.slice(1).trim() === d.name
+      ? d.mdl.viewLine
+      : `*${d.name.replace(/[\r\n]/g, ' ')}`;
   let s = `${viewLine}\n${d.mdl?.headerLine ?? DEFAULT_VIEW_HEADER}\n`;
   // Layers are flattened: every element is exported, hidden layers included (they are part of the model).
   // Imported objects keep their original order, new ones follow (nodes before links).
@@ -156,7 +239,8 @@ function viewFor(d: Diagram, snap: ProjectSnapshot, warnings: Set<string>): stri
   const fresh = Object.values(d.elements)
     .filter((el) => el.mdl?.sketchId === undefined)
     .sort(byKey((e) => e.z));
-  for (const el of Object.values(d.elements)) if (el.mdl?.sketchId !== undefined) items.push({ sort: el.mdl.sketchId, el });
+  for (const el of Object.values(d.elements))
+    if (el.mdl?.sketchId !== undefined) items.push({ sort: el.mdl.sketchId, el });
   for (const u of d.mdl?.unknown ?? []) items.push({ sort: u.sketchId, unknown: u });
   items.sort((a, b) => a.sort - b.sort);
   for (const el of fresh) if (el.type !== 'link') items.push({ sort: Infinity, el });
@@ -185,7 +269,9 @@ function viewFor(d: Diagram, snap: ProjectSnapshot, warnings: Set<string>): stri
     if (item.el) emitted.add(item.el.id);
     flush();
   }
-  ordered.push(...pending.filter((p) => d.elements[(p.el as Link).from] && d.elements[(p.el as Link).to]));
+  ordered.push(
+    ...pending.filter((p) => d.elements[(p.el as Link).from] && d.elements[(p.el as Link).to]),
+  );
 
   // Assign consecutive sketch ids.
   const newIds = new Map<string, number>();
@@ -222,7 +308,12 @@ function viewFor(d: Diagram, snap: ProjectSnapshot, warnings: Set<string>): stri
   return s;
 }
 
-function elementLines(el: DiagramElement, ids: Map<string, number>, snap: ProjectSnapshot, warnings: Set<string>): string {
+function elementLines(
+  el: DiagramElement,
+  ids: Map<string, number>,
+  snap: ProjectSnapshot,
+  warnings: Set<string>,
+): string {
   const id = String(ids.get(el.id));
   switch (el.type) {
     case 'variable': {
@@ -230,7 +321,10 @@ function elementLines(el: DiagramElement, ids: Map<string, number>, snap: Projec
       f[0] = '10';
       f[1] = id;
       const name = snap.variables[el.variableId]?.name ?? 'Unnamed';
-      f[2] = el.mdl?.rawName !== undefined && unquote(el.mdl.rawName) === name ? el.mdl.rawName : quoteName(name);
+      f[2] =
+        el.mdl?.rawName !== undefined && unquote(el.mdl.rawName) === name
+          ? el.mdl.rawName
+          : quoteName(name);
       setNum(f, 3, el.x);
       setNum(f, 4, el.y);
       setNum(f, 5, el.w / 2);
@@ -238,14 +332,29 @@ function elementLines(el: DiagramElement, ids: Map<string, number>, snap: Projec
       const color = el.style?.textColor ?? null;
       if (color !== fontFieldColor(f)) {
         if (color) {
-          f.splice(15, f.length - 15, '0-0-0', '0-0-0', `|||${hexToRgb(color)}`, '0', '0', '0', '0', '0', '0');
+          f.splice(
+            15,
+            f.length - 15,
+            '0-0-0',
+            '0-0-0',
+            `|||${hexToRgb(color)}`,
+            '0',
+            '0',
+            '0',
+            '0',
+            '0',
+            '0',
+          );
           f[9] = '2';
         } else {
           f.splice(15, f.length - 15, '0', '0', '0', '0', '0', '0');
           f[9] = '0';
         }
       }
-      if (el.form !== 'none') warnings.add('Variable box shapes are not exported to Vensim (variables are written as plain text).');
+      if (el.form !== 'none')
+        warnings.add(
+          'Variable box shapes are not exported to Vensim (variables are written as plain text).',
+        );
       if (el.style && Object.keys(el.style).some((k) => k !== 'textColor'))
         warnings.add('Fonts, fills and borders are not exported to Vensim; only text colors are.');
       return `${f.join(',')}\n`;
@@ -256,12 +365,19 @@ function elementLines(el: DiagramElement, ids: Map<string, number>, snap: Projec
       f[1] = id;
       f[2] = String(ids.get(el.from));
       f[3] = String(ids.get(el.to));
-      if (polarityFromCode(f[6]) !== el.polarity) f[6] = el.polarity ? POLARITY_CODES[el.polarity]! : '0';
+      if (polarityFromCode(f[6]) !== el.polarity)
+        f[6] = el.polarity ? POLARITY_CODES[el.polarity]! : '0';
       const color = el.style?.color ?? null;
       if (color !== rgbToHex(f[11])) f[11] = hexToRgb(color);
       let points = el.mdl?.text ?? '';
       const orig = el.mdl?.fields ? origControl(el.mdl.fields, points) : undefined;
-      const same = orig !== undefined && (orig === null ? el.control === null : !!el.control && Math.round(el.control.x) === orig.x && Math.round(el.control.y) === orig.y);
+      const same =
+        orig !== undefined &&
+        (orig === null
+          ? el.control === null
+          : !!el.control &&
+            Math.round(el.control.x) === orig.x &&
+            Math.round(el.control.y) === orig.y);
       if (!same) {
         f[4] = el.control ? '1' : '0';
         f[13] = '1';
@@ -269,7 +385,8 @@ function elementLines(el: DiagramElement, ids: Map<string, number>, snap: Projec
       }
       if (el.delay) warnings.add('Delay marks are not exported to Vensim.');
       if (el.label) warnings.add('Link labels are not exported to Vensim.');
-      if (el.style?.dash || el.style?.width || el.style?.head) warnings.add('Arrow line styles are not exported to Vensim; only colors are.');
+      if (el.style?.dash || el.style?.width || el.style?.head)
+        warnings.add('Arrow line styles are not exported to Vensim; only colors are.');
       return `${f.join(',')}|${points}\n`;
     }
     case 'loop': {
@@ -288,8 +405,10 @@ function elementLines(el: DiagramElement, ids: Map<string, number>, snap: Projec
       }
       f[7] = el.direction === 'cw' ? '4' : '5';
       f[8] = String(Number(f[8]) | 4);
-      const text = el.mdl?.text !== undefined && el.mdl.text.trim() === el.label ? el.mdl.text : el.label;
-      if (el.name) warnings.add('Loop names are not exported to Vensim (only the label, e.g. "R1").');
+      const text =
+        el.mdl?.text !== undefined && el.mdl.text.trim() === el.label ? el.mdl.text : el.label;
+      if (el.name)
+        warnings.add('Loop names are not exported to Vensim (only the label, e.g. "R1").');
       return `${f.join(',')}\n${text}\n`;
     }
     case 'text':
