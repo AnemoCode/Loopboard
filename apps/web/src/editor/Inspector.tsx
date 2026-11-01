@@ -3,15 +3,18 @@ import {
   ArrowUp,
   Eye,
   EyeOff,
+  History,
+  Layers,
   Lock,
   MessageCircle,
+  Paintbrush,
   Plus,
   RefreshCw,
   Trash2,
   Unlock,
   X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   addLayer,
   byKey,
@@ -33,12 +36,12 @@ import { useDocView } from './docView';
 import { LOCAL } from './session';
 import { useEditor, type PanelTab } from './store';
 
-const TABS: { id: PanelTab; label: string }[] = [
-  { id: 'design', label: 'Design' },
-  { id: 'layers', label: 'Layers' },
-  { id: 'loops', label: 'Loops' },
-  { id: 'comments', label: 'Comments' },
-  { id: 'history', label: 'History' },
+const TABS: { id: PanelTab; label: string; icon: ReactNode }[] = [
+  { id: 'design', label: 'Design', icon: <Paintbrush className="size-4" /> },
+  { id: 'layers', label: 'Layers', icon: <Layers className="size-4" /> },
+  { id: 'loops', label: 'Loops', icon: <RefreshCw className="size-4" /> },
+  { id: 'comments', label: 'Comments', icon: <MessageCircle className="size-4" /> },
+  { id: 'history', label: 'History', icon: <History className="size-4" /> },
 ];
 
 export function Inspector() {
@@ -49,24 +52,30 @@ export function Inspector() {
       aria-label="Side panel"
       className="pointer-events-auto flex h-full w-[22rem] shrink-0 flex-col border-l border-app bg-surface"
     >
-      <div className="flex items-center gap-0.5 border-b border-app px-2 py-1.5" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => set({ panelTab: t.id })}
-            className={cx(
-              'rounded-md px-1.5 py-1 text-[13px] font-medium transition-colors',
-              tab === t.id ? 'bg-surface-2 text-app' : 'text-muted hover:text-app',
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="flex items-stretch border-b border-app pl-1">
+        <div className="grid flex-1 grid-cols-5" role="tablist" aria-label="Panel sections">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => set({ panelTab: t.id })}
+              className={cx(
+                '-mb-px flex flex-col items-center gap-1 border-b-2 px-1 pb-2 pt-2.5 text-[11px] font-medium transition-colors',
+                tab === t.id
+                  ? 'border-accent-600 text-accent-700 dark:border-accent-400 dark:text-accent-300'
+                  : 'border-transparent text-muted hover:text-app',
+              )}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          ))}
+        </div>
         <button
           aria-label="Close panel"
-          className="ml-auto rounded-md p-1 text-muted hover:bg-surface-2 hover:text-app"
+          title="Close panel"
+          className="m-1.5 self-start rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-app"
           onClick={() => set({ panelOpen: false })}
         >
           <X className="size-4" />
