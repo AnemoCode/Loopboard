@@ -1,0 +1,17 @@
+# Local development infrastructure. Run the apps on the host with `pnpm dev`.
+name: loopwise-dev
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: loopwise
+      POSTGRES_PASSWORD: loopwise
+      POSTGRES_DB: loopwise
+    ports: ['5433:5432']
+    volumes: [dev_db:/var/lib/postgresql]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U loopwise']
+      interval: 2s
+      retries: 20
+volumes:
+  dev_db: {}
