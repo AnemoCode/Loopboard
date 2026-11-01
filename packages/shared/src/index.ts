@@ -124,6 +124,25 @@ export interface VersionSummary {
   createdAt: string;
 }
 
+/** One changelog entry: "<userName> <summary>". */
+export interface ChangeSummary {
+  id: number;
+  userId: string | null;
+  userName: string;
+  kind:
+    'add' | 'delete' | 'rename' | 'edit' | 'style' | 'layout' | 'comment' | 'structure' | 'restore';
+  summary: string;
+  diagramId: string | null;
+  elementIds: string[];
+  createdAt: string;
+}
+
+export interface ChangesPage {
+  changes: ChangeSummary[];
+  /** Pass as `before` to load older entries; null when there are none. */
+  nextCursor: number | null;
+}
+
 export interface InvitePreview {
   projectId: string;
   projectName: string;
