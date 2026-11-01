@@ -1,4 +1,6 @@
-# 16: Guest Access via Share Links (plan)
+# 16: Guest Access via Share Links
+
+> **Status: implemented** (as designed below). Code: `apps/server/src/routes/sharing.ts`, `apps/server/src/guests.ts`, `apps/web/src/pages/InvitePage.tsx`, `apps/web/src/editor/ShareDialog.tsx`. Tests: `apps/server/test/api.test.ts` (guest access), `e2e/guest.spec.ts`.
 
 ## Goal
 

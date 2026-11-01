@@ -62,7 +62,23 @@ Three containers: `db`, `server`, `web`. Workspace packages:
 | Templates: Fixes that Fail, Limits to Growth, Shifting the Burden | ✅ |
 | Command palette (⌘K) with variable search across diagrams | ✅ |
 | Undo/redo (your own changes only), copy/paste/duplicate across projects, snapping guides, keyboard shortcuts | ✅ |
+| Guest access: join through a share link with only a name, upgrade to an account later ([16](16-guest-access.md)) | ✅ |
+| Change history: who changed what, live, with moves grouped (see below) | ✅ |
 | Docker (compose stack with Caddy), CI workflow | ✅ |
+
+## Change history (changelog)
+
+The **History** tab in the side panel shows a live timeline of everyone's changes, interleaved with saved versions.
+
+- **How it's recorded:** the server listens to every committed transaction of a loaded document (`apps/server/src/changelog.ts`). It attributes the transaction to the collaborator whose connection sent it, or to the user an API action ran for (comments, restores). It then diffs the document before and after with the pure function `describeChanges` (`packages/model/src/changes.ts`). Server housekeeping (loading, repairs, migrations) is not logged.
+- **Grouping rules:**
+  - Moves, z-order changes, moves between layers, and reordering of diagrams or layers count as layout. One person's consecutive layout changes on the same diagram within 10 minutes merge into a single entry, e.g. "rearranged 12 elements".
+  - Everything else is listed individually: adding or deleting, renames, polarity, delay marks, labels, curving or straightening, resizing, shape changes, colours and other styles, locks, layer visibility, notes and units, comments.
+  - Within one transaction, links deleted together with their variable fold into that entry ("deleted variable “A” and 2 attached links"). More than 3 additions, deletions or style changes are summarised ("added 10 variables and 6 links").
+  - A version restore is logged as a single entry.
+- **Live updates:** after storing entries, the server sends a stateless message to connected clients, which refresh the panel. Saving a version does the same.
+- **Navigation:** clicking an entry opens its diagram, selects the affected elements that still exist, and centres them. The panel can be filtered by person, and saved versions appear as bookmarks that open the Version history dialog.
+- **Storage:** entries are stored in `project_changes` (paged API `GET /api/projects/:id/changes?before=&limit=`). Names shown are each person's current name, falling back to the name at the time. When a guest creates an account, their entries move with them.
 
 ## Vensim format: resolved questions
 
@@ -80,11 +96,11 @@ Still unverified (needs a Vensim installation): the encoding of delay marks, box
 
 | Suite | Count | What it covers |
 |-------|-------|----------------|
-| `packages/model` | 12 | Commands, cascades, shadows, z-order, copy/paste, loop analysis, **property-based convergence of 3 concurrently editing replicas** (150 runs) |
+| `packages/model` | 16 | Commands, cascades, shadows, z-order, copy/paste, loop analysis, changelog descriptions, **property-based convergence of 3 concurrently editing replicas** (150 runs) |
 | `packages/mdl` | 13 | Byte-identical round-trips (direct and through Yjs), semantics of both fixtures, edit-then-export, export of non-Vensim projects, 300-run corruption fuzzing |
 | `packages/render` | 8 | Metrics and wrapping, arcs, link clipping, deterministic SVG, XML escaping |
-| `apps/server` | 10 | Auth, CSRF, projects, import → live export, real WebSocket sync, presence, read-only enforcement, outsider refusal, revocation, persistence, commenter API, versions, duplicate/delete, pending invites |
-| `e2e` (Playwright) | 11 | Editing flows, multi-user collaboration (cursors, selections, live drags, follow), comments, roles, invite links, byte-identical `.mdl` export from the browser, PNG/SVG/PDF/JSON downloads, versions, command palette, no console/CSP errors |
+| `apps/server` | 18 | Auth, CSRF, projects, import → live export, real WebSocket sync, presence, read-only enforcement, outsider refusal, revocation, persistence, commenter API, versions, duplicate/delete, pending invites, guest access (join, restrictions, revocation, upgrade/merge, cleanup), changelog (attribution, grouping, live notification, paging) |
+| `e2e` (Playwright) | 14 | Editing flows, multi-user collaboration (cursors, selections, live drags, follow), comments, roles, invite links, byte-identical `.mdl` export from the browser, PNG/SVG/PDF/JSON downloads, versions, command palette, no console/CSP errors, guest join/upgrade/revocation, live History panel |
 
 The end-to-end suite runs both against the dev servers and against the production Docker stack (`BASE_URL=http://localhost:8080`).
 

@@ -4,6 +4,8 @@ Real-time collaborative **causal loop diagrams** in the browser, with Vensim `.m
 
 - **Draw** variables, causal links (curved like Vensim, with + / – polarity, delay marks and labels), R/B loop markers (clockwise or counter-clockwise), shapes and text.
 - **Collaborate live:** see everyone's cursor, selection and in-progress drags; follow a teammate's view; leave threaded comments.
+- **No account needed to join:** share a link — collaborators just type their name (and can create an account later to keep access).
+- **Follow what changed:** a live History panel lists who changed what (moves grouped, everything else itemised) next to saved versions.
 - **Organise:** many projects, several diagrams (views) per project, and layers within a diagram.
 - **Analyse:** feedback loops are detected automatically and classified as reinforcing or balancing.
 - **Interoperate:** import Vensim `.mdl` files and export them back unchanged; export PNG, SVG and vector PDF.
