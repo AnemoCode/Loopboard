@@ -57,7 +57,7 @@ Three containers: `db`, `server`, `web`. Workspace packages:
 | Multiple diagrams per project (Vensim views) and layers per diagram (visibility, lock, order) | ✅ |
 | Vensim `.mdl` import (byte-identical round-trip on both fixtures) | ✅ |
 | Export PNG (1×/2×/4×, transparent), SVG, PDF (vector, all diagrams), `.mdl`, `.cld.json` | ✅ |
-| Version history: autosave every 10 minutes of activity, named versions, preview, restore | ✅ |
+| Version history: autosave every 5 minutes while people edit (plus a trailing save), named versions, preview, restore | ✅ |
 | Roles: owner / editor / commenter / viewer, enforced in the API and the collab server | ✅ |
 | Templates: Fixes that Fail, Limits to Growth, Shifting the Burden | ✅ |
 | Command palette (⌘K) with variable search across diagrams | ✅ |
@@ -78,6 +78,7 @@ The **History** tab in the side panel shows a live timeline of everyone's change
   - A version restore is logged as a single entry.
 - **Live updates:** after storing entries, the server sends a stateless message to connected clients, which refresh the panel. Saving a version does the same.
 - **Navigation:** clicking an entry opens its diagram, selects the affected elements that still exist, and centres them. The panel can be filtered by person, and saved versions appear as bookmarks that open the Version history dialog.
+- **Undo:** each entry stores the inverse of exactly what it changed (`ops`: field-level before/after values, or whole objects for additions and deletions). **Undo** in the History panel (`POST /api/projects/:id/changes/:id/undo`, editors) reverts only fields that still hold the value the change set, so later edits by others are never overwritten. Deleted objects are recreated (variable, node, attached links and detached comments together), and created objects are removed. The result is reported as done, partly done, or nothing to undo. The undo is logged as its own entry ("undid: …"), which can itself be undone, and the original entry is marked "Undone by …". Undo data larger than 256 KB isn't kept, so very large imports or restores can't be undone that way; restore an earlier version instead.
 - **Storage:** entries are stored in `project_changes` (paged API `GET /api/projects/:id/changes?before=&limit=`). Names shown are each person's current name, falling back to the name at the time. When a guest creates an account, their entries move with them.
 
 ## Vensim format: resolved questions
