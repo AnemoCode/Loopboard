@@ -5,7 +5,16 @@ import WebSocket from 'ws';
 import * as Y from 'yjs';
 import { eq, sql } from 'drizzle-orm';
 import { parseMdl, writeMdl } from '@cld/mdl';
-import { addVariableNode, roots, toSnapshot } from '@cld/model';
+import {
+  addElement,
+  addVariableNode,
+  moveElements,
+  renameVariable,
+  roots,
+  setStyle,
+  toSnapshot,
+  updateElement,
+} from '@cld/model';
 import { docName } from '@cld/shared';
 import { buildApp } from '../src/app.js';
 import { createDb, runMigrations } from '../src/db/index.js';
@@ -84,7 +93,13 @@ class User {
       url: `${base.replace('http', 'ws')}/collab`,
       WebSocketPolyfill: CookieWS,
     });
-    const state = { synced: false, scope: '' as string, failed: '' as string, closed: 0 };
+    const state = {
+      synced: false,
+      scope: '' as string,
+      failed: '' as string,
+      closed: 0,
+      stateless: 0,
+    };
     const provider = new HocuspocusProvider({
       websocketProvider: socket,
       name: docName(projectId),
@@ -94,6 +109,7 @@ class User {
       onAuthenticated: ({ scope }) => (state.scope = scope),
       onAuthenticationFailed: ({ reason }) => (state.failed = reason),
       onClose: () => state.closed++,
+      onStateless: () => state.stateless++,
     });
     // A provider sharing an explicit socket must be attached.
     provider.attach();
@@ -537,6 +553,9 @@ describe('guest access via share links', () => {
     );
     expect(Object.values(toSnapshot(o.doc).comments)[0]!.createdBy).toBe(me.id);
     expect(await db.select().from(userTable).where(eq(userTable.id, guestId))).toHaveLength(0);
+    // Their changelog entries now belong to the account.
+    const log = (await owner.req('GET', `/api/projects/${pid}/changes`)).json.changes;
+    expect(log.find((c: any) => c.summary.startsWith('commented'))).toMatchObject({ userId: me.id, userName: 'Vivi' });
     o.destroy();
   });
 
@@ -566,5 +585,107 @@ describe('guest access via share links', () => {
       .where(eq(userTable.id, id));
     expect(await cleanupGuests(db)).toBeGreaterThanOrEqual(1);
     expect((await lonely.req('GET', '/api/me')).status).toBe(401);
+  });
+});
+
+describe('changelog', () => {
+  const lead = new User('Lena', 'lena@example.com');
+  const mate = new User('Max', 'max@example.com');
+
+  it('records who changed what, groups moves and notifies clients live', async () => {
+    await lead.signUp();
+    await mate.signUp();
+    const pid = (await lead.req('POST', '/api/projects', { name: 'Logged' })).json.id;
+    await lead.req('POST', `/api/projects/${pid}/members`, {
+      email: 'max@example.com',
+      role: 'editor',
+    });
+    const l = lead.connect(pid);
+    const m = mate.connect(pid);
+    await until(() => l.state.synced && m.state.synced);
+    const d = [...roots(m.doc).diagrams.keys()][0]!;
+    const layer = [...(roots(m.doc).diagrams.get(d)!.get('layers') as Y.Map<unknown>).keys()][0]!;
+    const LOCAL = { local: true };
+
+    const a = addVariableNode(m.doc, d, { name: 'Births', x: 0, y: 0, layerId: layer }, LOCAL);
+    const b = addVariableNode(
+      m.doc,
+      d,
+      { name: 'Population', x: 300, y: 0, layerId: layer },
+      LOCAL,
+    );
+    const link = addElement(
+      m.doc,
+      d,
+      { type: 'link', layerId: layer, from: a, to: b, control: null, polarity: null },
+      LOCAL,
+    );
+    updateElement(m.doc, d, link, { polarity: '+' }, LOCAL);
+    // Several moves in a row become one entry.
+    moveElements(m.doc, d, [{ id: a, dx: 10, dy: 0 }], LOCAL);
+    moveElements(m.doc, d, [{ id: b, dx: 0, dy: 20 }], LOCAL);
+    moveElements(m.doc, d, [{ id: a, dx: 5, dy: 5 }], LOCAL);
+    const vid = (toSnapshot(m.doc).diagrams[d]!.elements[a] as { variableId: string }).variableId;
+    renameVariable(m.doc, vid, 'Birth rate', LOCAL);
+    await until(() => !!toSnapshot(l.doc).diagrams[d]!.elements[b]);
+    setStyle(l.doc, d, [b], { textColor: '#2563eb' }, LOCAL);
+
+    await until(() => l.state.stateless > 0);
+    const expected = [
+      'Lena changed text color of “Population”',
+      'Max renamed “Births” to “Birth rate”',
+      'Max rearranged 2 elements',
+      'Max set polarity of “Births → Population” to +',
+      'Max added link “Births → Population”',
+      'Max added variable “Population”',
+      'Max added variable “Births”',
+    ];
+    const read = async () =>
+      (await lead.req('GET', `/api/projects/${pid}/changes`)).json.changes.map(
+        (c: any) => `${c.userName} ${c.summary}`,
+      );
+    const start = Date.now();
+    while (JSON.stringify(await read()) !== JSON.stringify(expected) && Date.now() - start < 4000)
+      await wait(50);
+    expect(await read()).toEqual(expected);
+    const first = (await lead.req('GET', `/api/projects/${pid}/changes`)).json.changes;
+    expect(first[2]).toMatchObject({ kind: 'layout', diagramId: d });
+    expect(first[2].elementIds.sort()).toEqual([a, b].sort());
+
+    // Comments through the API and restores are attributed and logged.
+    await mate.req('POST', `/api/projects/${pid}/comments`, {
+      diagramId: d,
+      elementId: a,
+      x: 0,
+      y: 0,
+      body: 'Delay?',
+    });
+    await lead.req('POST', `/api/projects/${pid}/versions`, { label: 'Clean' });
+    const versions = (await lead.req('GET', `/api/projects/${pid}/versions`)).json;
+    await lead.req(
+      'POST',
+      `/api/projects/${pid}/versions/${versions.find((v: any) => v.label === 'Clean').id}/restore`,
+    );
+    const s2 = Date.now();
+    let latest: string[] = [];
+    while (Date.now() - s2 < 4000) {
+      latest = (await read()).slice(0, 2);
+      if (latest[0]?.startsWith('Lena restored')) break;
+      await wait(50);
+    }
+    expect(latest).toEqual([
+      'Lena restored the version “Clean”',
+      'Max commented on “Birth rate”: “Delay?”',
+    ]);
+
+    // Paging
+    const p1 = (await lead.req('GET', `/api/projects/${pid}/changes?limit=3`)).json;
+    expect(p1.changes).toHaveLength(3);
+    const p2 = (
+      await lead.req('GET', `/api/projects/${pid}/changes?limit=3&before=${p1.nextCursor}`)
+    ).json;
+    expect(p2.changes[0].id).toBeLessThan(p1.changes[2].id);
+    l.destroy();
+    m.destroy();
   });
 });

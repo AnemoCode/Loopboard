@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import * as Y from 'yjs';
 import {
@@ -14,13 +14,22 @@ import {
   createProjectBody,
   updateProjectBody,
   versionBody,
+  type ChangesPage,
+  type ChangeSummary,
   type ProjectSummary,
   type VersionSummary,
 } from '@cld/shared';
 import type { Ctx } from '../app.js';
 import { isUuid } from '../access.js';
 import { HttpError } from '../errors.js';
-import { projectDocuments, projectMembers, projects, projectVersions, user } from '../db/schema.js';
+import {
+  projectChanges,
+  projectDocuments,
+  projectMembers,
+  projects,
+  projectVersions,
+  user,
+} from '../db/schema.js';
 
 const idParam = (params: unknown) => {
   const id = (params as { id: string }).id;
@@ -181,6 +190,46 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
       .send(svg);
   });
 
+  // ---- changelog
+
+  app.get('/api/projects/:id/changes', async (req): Promise<ChangesPage> => {
+    const id = idParam(req.params);
+    await ctx.requireRole(req, id, 'viewer');
+    const q = req.query as { before?: string; limit?: string };
+    const limit = Math.min(Math.max(Number(q.limit) || 50, 1), 200);
+    const before = Number(q.before);
+    const rows = await db
+      .select({
+        id: projectChanges.id,
+        userId: projectChanges.userId,
+        // Prefer the person's current name; fall back to the name at the time.
+        userName: sql<string>`coalesce(${user.name}, ${projectChanges.userName})`,
+        kind: projectChanges.kind,
+        summary: projectChanges.summary,
+        diagramId: projectChanges.diagramId,
+        elementIds: projectChanges.elementIds,
+        createdAt: projectChanges.createdAt,
+      })
+      .from(projectChanges)
+      .leftJoin(user, eq(user.id, projectChanges.userId))
+      .where(
+        Number.isFinite(before) && before > 0
+          ? and(eq(projectChanges.projectId, id), lt(projectChanges.id, before))
+          : eq(projectChanges.projectId, id),
+      )
+      .orderBy(desc(projectChanges.id))
+      .limit(limit + 1);
+    const page = rows.slice(0, limit);
+    return {
+      changes: page.map((r) => ({
+        ...r,
+        kind: r.kind as ChangeSummary['kind'],
+        createdAt: r.createdAt.toISOString(),
+      })),
+      nextCursor: rows.length > limit ? page[page.length - 1]!.id : null,
+    };
+  });
+
   // ---- versions
 
   app.get('/api/projects/:id/versions', async (req): Promise<VersionSummary[]> => {
@@ -214,6 +263,7 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
       .insert(projectVersions)
       .values({ projectId: id, state, label, kind: 'manual', createdBy: me.id })
       .returning({ id: projectVersions.id });
+    collab.notifyChanges(id);
     return reply.status(201).send({ id: v!.id });
   });
 
@@ -239,17 +289,36 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
     const me = ctx.requireUser(req);
     const id = idParam(req.params);
     await ctx.requireRole(req, id, 'editor');
-    const snap = await loadVersion(id, (req.params as { vid: string }).vid);
+    const vid = (req.params as { vid: string }).vid;
+    const snap = await loadVersion(id, vid);
+    const [v] = await db
+      .select({
+        label: projectVersions.label,
+        kind: projectVersions.kind,
+        createdAt: projectVersions.createdAt,
+      })
+      .from(projectVersions)
+      .where(eq(projectVersions.id, vid));
+    const restoreLabel =
+      v?.kind === 'manual' && v.label
+        ? `“${v.label}”`
+        : `from ${v?.createdAt.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) ?? 'earlier'}`;
     const current = await collab.currentState(id);
     if (current)
-      await db.insert(projectVersions).values({
-        projectId: id,
-        state: current,
-        label: 'Before restore',
-        kind: 'restore',
-        createdBy: me.id,
-      });
-    await collab.withDocument(id, (doc) => replaceContent(doc, snap, 'restore'));
+      await db
+        .insert(projectVersions)
+        .values({
+          projectId: id,
+          state: current,
+          label: 'Before restore',
+          kind: 'restore',
+          createdBy: me.id,
+        });
+    await collab.withDocument(id, (doc) => replaceContent(doc, snap, 'restore'), {
+      userId: me.id,
+      name: me.name,
+      restoreLabel,
+    });
     return { ok: true };
   });
 }

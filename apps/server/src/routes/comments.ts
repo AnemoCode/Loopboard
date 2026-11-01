@@ -32,19 +32,23 @@ export async function commentRoutes(app: FastifyInstance, ctx: Ctx) {
     await ctx.requireRole(req, id, 'commenter');
     const body = commentBody.parse(req.body);
     let threadId = '';
-    await collab.withDocument(id, (doc) => {
-      if (!roots(doc).diagrams.has(body.diagramId)) throw new HttpError(404, 'Diagram not found');
-      threadId = addThread(doc, {
-        diagramId: body.diagramId,
-        ...(body.elementId ? { elementId: body.elementId } : {}),
-        x: body.x,
-        y: body.y,
-        createdBy: me.id,
-        createdAt: Date.now(),
-        body: body.body,
-        authorName: me.name,
-      });
-    });
+    await collab.withDocument(
+      id,
+      (doc) => {
+        if (!roots(doc).diagrams.has(body.diagramId)) throw new HttpError(404, 'Diagram not found');
+        threadId = addThread(doc, {
+          diagramId: body.diagramId,
+          ...(body.elementId ? { elementId: body.elementId } : {}),
+          x: body.x,
+          y: body.y,
+          createdBy: me.id,
+          createdAt: Date.now(),
+          body: body.body,
+          authorName: me.name,
+        });
+      },
+      { userId: me.id, name: me.name },
+    );
     return reply.status(201).send({ id: threadId });
   });
 
@@ -55,24 +59,32 @@ export async function commentRoutes(app: FastifyInstance, ctx: Ctx) {
     const { body } = replyBody.parse(req.body);
     const { threadId } = req.params as { threadId: string };
     let messageId: string | null = null;
-    await collab.withDocument(id, (doc) => {
-      messageId = addMessage(doc, threadId, {
-        authorId: me.id,
-        authorName: me.name,
-        body,
-        createdAt: Date.now(),
-      });
-    });
+    await collab.withDocument(
+      id,
+      (doc) => {
+        messageId = addMessage(doc, threadId, {
+          authorId: me.id,
+          authorName: me.name,
+          body,
+          createdAt: Date.now(),
+        });
+      },
+      { userId: me.id, name: me.name },
+    );
     if (!messageId) throw new HttpError(404, 'Comment not found');
     return reply.status(201).send({ id: messageId });
   });
 
   app.patch('/api/projects/:id/comments/:threadId', async (req) => {
+    const me = ctx.requireUser(req);
     const id = projectId(req.params);
     await ctx.requireRole(req, id, 'commenter');
     const { resolved } = resolveBody.parse(req.body);
     const { threadId } = req.params as { threadId: string };
-    await collab.withDocument(id, (doc) => setThreadResolved(doc, threadId, resolved));
+    await collab.withDocument(id, (doc) => setThreadResolved(doc, threadId, resolved), {
+      userId: me.id,
+      name: me.name,
+    });
     return { ok: true };
   });
 
@@ -95,10 +107,14 @@ export async function commentRoutes(app: FastifyInstance, ctx: Ctx) {
     await ctx.requireRole(req, id, 'commenter');
     const { body } = replyBody.parse(req.body);
     const { threadId, messageId } = req.params as { threadId: string; messageId: string };
-    await collab.withDocument(id, (doc) => {
-      authorize(doc, threadId, messageId, me.id, false);
-      editMessage(doc, threadId, messageId, body);
-    });
+    await collab.withDocument(
+      id,
+      (doc) => {
+        authorize(doc, threadId, messageId, me.id, false);
+        editMessage(doc, threadId, messageId, body);
+      },
+      { userId: me.id, name: me.name },
+    );
     return { ok: true };
   });
 
@@ -107,10 +123,14 @@ export async function commentRoutes(app: FastifyInstance, ctx: Ctx) {
     const id = projectId(req.params);
     const role = await ctx.requireRole(req, id, 'commenter');
     const { threadId, messageId } = req.params as { threadId: string; messageId: string };
-    await collab.withDocument(id, (doc) => {
-      authorize(doc, threadId, messageId, me.id, atLeast(role, 'editor'));
-      editMessage(doc, threadId, messageId, null);
-    });
+    await collab.withDocument(
+      id,
+      (doc) => {
+        authorize(doc, threadId, messageId, me.id, atLeast(role, 'editor'));
+        editMessage(doc, threadId, messageId, null);
+      },
+      { userId: me.id, name: me.name },
+    );
     return { ok: true };
   });
 }
