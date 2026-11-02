@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, count, desc, eq, lt, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import * as Y from 'yjs';
 import {
@@ -12,12 +12,14 @@ import {
 } from '@cld/model';
 import { renderDiagramSvg } from '@cld/render';
 import {
+  GUEST_PROJECT_LIMIT,
   createProjectBody,
   updateProjectBody,
   versionBody,
   type ChangesPage,
   type UndoResult,
   type ChangeSummary,
+  type Me,
   type ProjectSummary,
   type VersionSummary,
 } from '@cld/shared';
@@ -73,6 +75,17 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
     });
   }
 
+  /** Guests may own a few projects of their own; accounts are unlimited. */
+  async function requireRoomForProject(me: Me) {
+    if (!me.isGuest) return;
+    const [row] = await db.select({ n: count() }).from(projects).where(eq(projects.ownerId, me.id));
+    if ((row?.n ?? 0) >= GUEST_PROJECT_LIMIT)
+      throw new HttpError(
+        403,
+        `Guests can have up to ${GUEST_PROJECT_LIMIT} projects. Create a free account for more.`,
+      );
+  }
+
   app.get('/api/projects', async (req): Promise<ProjectSummary[]> => {
     const me = ctx.requireUser(req);
     const owner = db.$with('owner').as(db.select({ id: user.id, name: user.name }).from(user));
@@ -103,8 +116,9 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
     '/api/projects',
     { config: { rateLimit: { max: 60, timeWindow: '1 hour' } } },
     async (req, reply) => {
-      const me = ctx.requireAccount(req);
+      const me = ctx.requireUser(req);
       const body = createProjectBody.parse(req.body);
+      await requireRoomForProject(me);
       const doc = new Y.Doc();
       if (body.snapshot !== undefined) replaceContent(doc, parseSnapshot(body.snapshot));
       else initDoc(doc, 'Main');
@@ -134,16 +148,17 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
   });
 
   app.patch('/api/projects/:id', async (req) => {
-    ctx.requireAccount(req);
+    const me = ctx.requireUser(req);
     const id = idParam(req.params);
-    await ctx.requireRole(req, id, 'editor');
+    // Guests may rename only the projects they own.
+    await ctx.requireRole(req, id, me.isGuest ? 'owner' : 'editor');
     const { name } = updateProjectBody.parse(req.body);
     await db.update(projects).set({ name }).where(eq(projects.id, id));
     return { ok: true };
   });
 
   app.delete('/api/projects/:id', async (req) => {
-    ctx.requireAccount(req);
+    ctx.requireUser(req);
     const id = idParam(req.params);
     await ctx.requireRole(req, id, 'owner');
     collab.closeProject(id);
@@ -152,9 +167,10 @@ export async function projectRoutes(app: FastifyInstance, ctx: Ctx) {
   });
 
   app.post('/api/projects/:id/duplicate', async (req, reply) => {
-    const me = ctx.requireAccount(req);
+    const me = ctx.requireUser(req);
     const id = idParam(req.params);
     await ctx.requireRole(req, id, 'viewer');
+    await requireRoomForProject(me);
     const [p] = await db.select().from(projects).where(eq(projects.id, id));
     const state = await collab.currentState(id);
     if (!p || !state) throw new HttpError(404, 'Project not found');

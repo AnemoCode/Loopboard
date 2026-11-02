@@ -16,12 +16,16 @@ import {
   toSnapshot,
   updateElement,
 } from '@cld/model';
-import { docName } from '@cld/shared';
+import { docName, GUEST_PROJECT_LIMIT } from '@cld/shared';
 import { buildApp } from '../src/app.js';
 import { createDb, runMigrations } from '../src/db/index.js';
 import { loadEnv } from '../src/env.js';
 import { cleanupGuests } from '../src/guests.js';
-import { user as userTable } from '../src/db/schema.js';
+import {
+  projects as projectsTable,
+  session as sessionTable,
+  user as userTable,
+} from '../src/db/schema.js';
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? 'postgres://loopwise:loopwise@localhost:5433/loopwise_test';
@@ -456,9 +460,9 @@ describe('guest access via share links', () => {
   });
 
   it('keeps guests out of account-only actions and hides emails', async () => {
-    expect((await guest.req('POST', '/api/projects', { name: 'Mine' })).status).toBe(403);
-    expect((await guest.req('POST', `/api/projects/${pid}/duplicate`)).status).toBe(403);
+    // Renaming or deleting a project they only joined needs the owner role.
     expect((await guest.req('PATCH', `/api/projects/${pid}`, { name: 'x' })).status).toBe(403);
+    expect((await guest.req('DELETE', `/api/projects/${pid}`)).status).toBe(403);
     expect((await guest.req('POST', `/api/projects/${pid}/links`, { role: 'editor' })).status).toBe(
       403,
     );
@@ -589,6 +593,119 @@ describe('guest access via share links', () => {
       .where(eq(userTable.id, id));
     expect(await cleanupGuests(db)).toBeGreaterThanOrEqual(1);
     expect((await lonely.req('GET', '/api/me')).status).toBe(401);
+  });
+});
+
+describe('guest projects (start without an account)', () => {
+  const visitor = new User('Starter', 'starter@example.com');
+  let own = '';
+
+  it('starts a guest session in one call and keeps it on repeat', async () => {
+    const started = await visitor.req('POST', '/api/guest', {});
+    expect(started.status).toBe(200);
+    expect(started.json).toMatchObject({ name: 'Guest', isGuest: true, email: '' });
+    const again = await visitor.req('POST', '/api/guest', { name: 'Other' });
+    expect(again.json.id).toBe(started.json.id);
+    expect((await visitor.req('GET', '/api/me')).json.id).toBe(started.json.id);
+    const named = await new User('Named', '').req('POST', '/api/guest', { name: 'Nora' });
+    expect(named.json).toMatchObject({ name: 'Nora', isGuest: true });
+  });
+
+  it('lets guests create, import, rename, duplicate and delete their own projects', async () => {
+    const created = await visitor.req('POST', '/api/projects', { name: 'Sketch' });
+    expect(created.status).toBe(201);
+    own = created.json.id;
+    expect((await visitor.req('GET', `/api/projects/${own}`)).json.role).toBe('owner');
+    expect((await visitor.req('PATCH', `/api/projects/${own}`, { name: 'Sketch 2' })).status).toBe(
+      200,
+    );
+    const fixture = readFileSync(
+      new URL('../../../packages/mdl/test/fixtures/coffee-agroforestry.mdl', import.meta.url),
+      'utf8',
+    );
+    const imported = await visitor.req('POST', '/api/projects', {
+      name: 'Coffee',
+      snapshot: parseMdl(fixture).snapshot,
+    });
+    expect(imported.status).toBe(201);
+    const copy = await visitor.req('POST', `/api/projects/${own}/duplicate`);
+    expect(copy.status).toBe(201);
+    // At the limit: no more projects until they create an account or delete one.
+    const over = await visitor.req('POST', '/api/projects', { name: 'One too many' });
+    expect(over.status).toBe(403);
+    expect(over.json.title).toContain(`up to ${GUEST_PROJECT_LIMIT} projects`);
+    expect((await visitor.req('DELETE', `/api/projects/${copy.json.id}`)).status).toBe(200);
+    expect((await visitor.req('POST', '/api/projects', { name: 'Room again' })).status).toBe(201);
+    expect((await visitor.req('GET', '/api/projects')).json).toHaveLength(GUEST_PROJECT_LIMIT);
+  });
+
+  it('asks guests for an account before sharing', async () => {
+    expect(
+      (await visitor.req('POST', `/api/projects/${own}/links`, { role: 'editor' })).status,
+    ).toBe(403);
+    expect(
+      (
+        await visitor.req('POST', `/api/projects/${own}/members`, {
+          email: 'friend@example.com',
+          role: 'editor',
+        })
+      ).status,
+    ).toBe(403);
+  });
+
+  it('keeps the projects (and the work in them) when the guest signs up', async () => {
+    const c = visitor.connect(own);
+    await until(() => c.state.synced);
+    const diagramId = [...roots(c.doc).diagrams.keys()][0]!;
+    const layerId = [
+      ...(roots(c.doc).diagrams.get(diagramId)!.get('layers') as Y.Map<unknown>).keys(),
+    ][0]!;
+    addVariableNode(c.doc, diagramId, { name: 'Guest work', x: 0, y: 0, layerId });
+    c.destroy();
+    await wait(300);
+    const guestId = (await visitor.req('GET', '/api/me')).json.id;
+
+    await visitor.signUp();
+    const me = (await visitor.req('GET', '/api/me')).json;
+    expect(me.isGuest).toBe(false);
+    expect(await db.select().from(userTable).where(eq(userTable.id, guestId))).toHaveLength(0);
+    const mine = (await visitor.req('GET', '/api/projects')).json;
+    expect(mine).toHaveLength(GUEST_PROJECT_LIMIT);
+    expect(mine.every((p: { role: string }) => p.role === 'owner')).toBe(true);
+    const [row] = await db.select().from(projectsTable).where(eq(projectsTable.id, own));
+    expect(row!.ownerId).toBe(me.id);
+    const again = visitor.connect(own);
+    await until(() => again.state.synced);
+    expect(Object.values(toSnapshot(again.doc).variables).map((v) => v.name)).toContain(
+      'Guest work',
+    );
+    again.destroy();
+    // Now sharing works.
+    expect(
+      (await visitor.req('POST', `/api/projects/${own}/links`, { role: 'editor' })).status,
+    ).toBe(201);
+  });
+
+  it('cleans up guests whose sessions expired, together with their projects', async () => {
+    const gone = new User('Gone', '');
+    const id = (await gone.req('POST', '/api/guest', {})).json.id;
+    const p = (await gone.req('POST', '/api/projects', { name: 'Abandoned' })).json.id;
+    const keeper = new User('Keeper', '');
+    const keeperId = (await keeper.req('POST', '/api/guest', {})).json.id;
+    await keeper.req('POST', '/api/projects', { name: 'Active' });
+    const old = new Date(Date.now() - 40 * 24 * 3600 * 1000);
+    for (const uid of [id, keeperId])
+      await db.update(userTable).set({ createdAt: old }).where(eq(userTable.id, uid));
+    await db
+      .update(sessionTable)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(sessionTable.userId, id));
+
+    expect(await cleanupGuests(db)).toBeGreaterThanOrEqual(1);
+    expect(await db.select().from(userTable).where(eq(userTable.id, id))).toHaveLength(0);
+    expect(await db.select().from(projectsTable).where(eq(projectsTable.id, p))).toHaveLength(0);
+    // A guest with a live session keeps everything.
+    expect((await keeper.req('GET', '/api/projects')).json).toHaveLength(1);
   });
 });
 

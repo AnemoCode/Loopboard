@@ -3,11 +3,19 @@ import { reassignCommentAuthor } from '@cld/model';
 import { atLeast, type Role } from '@cld/shared';
 import type { Collab } from './collab.js';
 import type { Db } from './db/index.js';
-import { projectChanges, projectMembers, projectVersions, session, user } from './db/schema.js';
+import {
+  projectChanges,
+  projectMembers,
+  projects,
+  projectVersions,
+  session,
+  user,
+} from './db/schema.js';
 
 /**
- * A guest created an account (or signed in to one): move their memberships, version authorship
- * and comment authorship to the account. Runs before Better Auth deletes the guest user.
+ * A guest created an account (or signed in to one): move their projects, memberships, version
+ * authorship and comment authorship to the account. Runs before Better Auth deletes the guest user
+ * (which would otherwise delete the projects the guest owns, via the owner_id cascade).
  */
 export async function migrateGuest(
   db: Db,
@@ -32,6 +40,7 @@ export async function migrateGuest(
         .where(and(eq(projectMembers.projectId, m.projectId), eq(projectMembers.userId, to)));
     }
   }
+  await db.update(projects).set({ ownerId: to }).where(eq(projects.ownerId, from));
   await db
     .update(projectVersions)
     .set({ createdBy: to })
@@ -45,17 +54,20 @@ export async function migrateGuest(
 const DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Delete guests who no longer belong to any project (after a day's grace) or haven't been active
- * for 90 days. Their comments keep the author's name, which is stored in the document.
+ * Delete guests who no longer belong to any project (after a day's grace) or whose sessions have all
+ * expired: nobody can sign in as them again. Projects they own go with them (owner_id cascade) —
+ * guests can't share, so nobody else loses access. Comments keep the author's name, which is stored
+ * in the document.
  */
 export async function cleanupGuests(db: Db): Promise<number> {
+  const dayAgo = new Date(Date.now() - DAY);
   const orphaned = await db
     .select({ id: user.id })
     .from(user)
     .where(
       and(
         eq(user.isAnonymous, true),
-        lt(user.createdAt, new Date(Date.now() - DAY)),
+        lt(user.createdAt, dayAgo),
         notExists(
           db
             .select({ one: sql`1` })
@@ -64,27 +76,22 @@ export async function cleanupGuests(db: Db): Promise<number> {
         ),
       ),
     );
-  const inactive = await db
+  const expired = await db
     .select({ id: user.id })
     .from(user)
     .where(
       and(
         eq(user.isAnonymous, true),
+        lt(user.createdAt, dayAgo),
         notExists(
           db
             .select({ one: sql`1` })
             .from(session)
-            .where(
-              and(
-                eq(session.userId, user.id),
-                gt(session.updatedAt, new Date(Date.now() - 90 * DAY)),
-              ),
-            ),
+            .where(and(eq(session.userId, user.id), gt(session.expiresAt, new Date()))),
         ),
-        lt(user.createdAt, new Date(Date.now() - 90 * DAY)),
       ),
     );
-  const ids = [...new Set([...orphaned, ...inactive].map((u) => u.id))];
+  const ids = [...new Set([...orphaned, ...expired].map((u) => u.id))];
   if (ids.length) await db.delete(user).where(inArray(user.id, ids));
   return ids.length;
 }

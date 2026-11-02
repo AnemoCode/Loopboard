@@ -53,6 +53,10 @@ export const linkPatchBody = z.object({
 });
 export const displayName = z.string().trim().min(1, 'Please enter your name').max(50);
 export const guestJoinBody = z.object({ name: displayName });
+/** Start a guest session without a share link ("Start drawing — no account needed"). */
+export const startGuestBody = z.object({ name: displayName.optional() });
+/** How many projects a guest (no account) may own. */
+export const GUEST_PROJECT_LIMIT = 3;
 export const updateMeBody = z.object({ name: displayName });
 export const versionBody = z.object({ label: z.string().trim().min(1).max(200) });
 

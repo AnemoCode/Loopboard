@@ -3,7 +3,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import { eq, sql } from 'drizzle-orm';
 import type { AppConfig, Me, Role } from '@cld/shared';
-import { atLeast, updateMeBody } from '@cld/shared';
+import { atLeast, startGuestBody, updateMeBody } from '@cld/shared';
 import { createAuth, type Auth, type AuthHooks } from './auth.js';
 import { cleanupGuests, migrateGuest } from './guests.js';
 import { user } from './db/schema.js';
@@ -153,6 +153,27 @@ export async function buildApp(env: Env, db: Db) {
     ],
   }));
   app.get('/api/me', async (req) => requireUser(req));
+  /**
+   * "Start drawing — no account needed": create a guest session (anonymous user) without a share
+   * link. Anyone already signed in (guest or account) keeps their session.
+   */
+  app.post(
+    '/api/guest',
+    { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } },
+    async (req, reply): Promise<Me> => {
+      if (req.user) return req.user;
+      const { name } = startGuestBody.parse(req.body ?? {});
+      const { headers, response } = await auth.api.signInAnonymous({
+        headers: headersOf(req),
+        returnHeaders: true,
+      });
+      const cookies = headers.getSetCookie();
+      if (cookies.length) reply.header('set-cookie', cookies);
+      const u = response.user;
+      if (name) await db.update(user).set({ name, updatedAt: new Date() }).where(eq(user.id, u.id));
+      return { id: u.id, name: name ?? u.name, email: '', image: null, isGuest: true };
+    },
+  );
   app.patch('/api/me', async (req) => {
     const me = requireUser(req);
     const { name } = updateMeBody.parse(req.body);
