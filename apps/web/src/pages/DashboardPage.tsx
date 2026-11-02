@@ -11,11 +11,12 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
-import { useRef, useState, type DragEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { emptySnapshot } from '@cld/model';
-import { ROLE_LABELS, type ProjectSummary } from '@cld/shared';
+import { darkTheme, lightTheme, renderDiagramSvg } from '@cld/render';
+import { GUEST_PROJECT_LIMIT, ROLE_LABELS, type ProjectSummary } from '@cld/shared';
 import { Logo } from '../components/Logo';
 import { UserMenu } from '../components/UserMenu';
 import {
@@ -35,7 +36,8 @@ import {
 import { api, errorMessage } from '../lib/api';
 import { ACCEPTED_FILES, readDiagramFile } from '../lib/files';
 import { keys, useMe, useProjects } from '../lib/queries';
-import { TEMPLATES } from '../lib/templates';
+import { TEMPLATES, type Template } from '../lib/templates';
+import { useIsDark } from '../lib/theme';
 import { timeAgo } from '../lib/time';
 
 export function DashboardPage() {
@@ -52,6 +54,14 @@ export function DashboardPage() {
   const [dragOver, setDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [params, setParams] = useSearchParams();
+  // "Start drawing" lands here with ?new=1: open the template picker right away.
+  useEffect(() => {
+    if (params.get('new') !== '1') return;
+    setCreating(true);
+    setParams({}, { replace: true });
+  }, [params, setParams]);
+  const ownedCount = (projects.data ?? []).filter((p) => p.role === 'owner').length;
 
   const refresh = () => qc.invalidateQueries({ queryKey: keys.projects });
 
@@ -98,7 +108,7 @@ export function DashboardPage() {
     <div
       className="min-h-full"
       onDragOver={(e) => {
-        if (!guest && e.dataTransfer.types.includes('Files')) {
+        if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault();
           setDragOver(true);
         }
@@ -118,12 +128,12 @@ export function DashboardPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-app">Projects</h1>
             <p className="mt-1 text-sm text-muted">
-              {guest
-                ? `Hi ${me.name.split(' ')[0]}, these are the projects you joined as a guest.`
+              {guest && me.name === 'Guest'
+                ? 'Welcome! Start a diagram, or drop a Vensim .mdl file anywhere on this page.'
                 : `Hi ${me.name.split(' ')[0]}, pick up where you left off or start something new.`}
             </p>
           </div>
-          <div className={cx('flex gap-2', guest && 'hidden')}>
+          <div className="flex gap-2">
             <Button onClick={() => fileInput.current?.click()} loading={importing}>
               <FileUp className="size-4" /> Import
             </Button>
@@ -178,10 +188,6 @@ export function DashboardPage() {
             </div>
           ) : projects.error ? (
             <p className="text-sm text-red-600">{errorMessage(projects.error)}</p>
-          ) : visible.length === 0 && guest ? (
-            <EmptyState icon={<FolderOpen className="size-5" />} title="No projects yet">
-              Open a share link to join a project.
-            </EmptyState>
           ) : visible.length === 0 ? (
             projects.data?.length ? (
               <EmptyState icon={<Search className="size-5" />} title="No matching projects" />
@@ -224,8 +230,9 @@ export function DashboardPage() {
             <div className="flex-1">
               <h2 className="font-medium text-app">Keep your projects</h2>
               <p className="mt-1 text-sm text-muted">
-                Guest access lives in this browser only. Create a free account to keep these
-                projects on every device and start your own.
+                You're working as a guest, so your projects live in this browser only. Create a free
+                account to share them, keep them on every device and create more than{' '}
+                {GUEST_PROJECT_LIMIT} ({ownedCount} of {GUEST_PROJECT_LIMIT} used).
               </p>
             </div>
             <Button variant="primary" onClick={() => navigate('/signup')}>
@@ -332,12 +339,12 @@ function ProjectCard({
             </MenuItem>
             <MenuItem
               icon={<Pencil className="size-4" />}
-              disabled={guest || p.role === 'viewer' || p.role === 'commenter'}
+              disabled={guest ? p.role !== 'owner' : p.role === 'viewer' || p.role === 'commenter'}
               onSelect={onRename}
             >
               Rename
             </MenuItem>
-            <MenuItem icon={<Copy className="size-4" />} disabled={guest} onSelect={duplicate}>
+            <MenuItem icon={<Copy className="size-4" />} onSelect={duplicate}>
               Duplicate
             </MenuItem>
             <MenuSeparator />
@@ -433,6 +440,7 @@ function NewProjectDialog({
                     : 'border-app hover:bg-surface-2',
                 )}
               >
+                <TemplatePreview template={'build' in t ? t : null} />
                 <div className="text-sm font-medium text-app">{t.name}</div>
                 <div className="mt-0.5 text-xs text-muted">{t.description}</div>
               </button>
@@ -441,6 +449,31 @@ function NewProjectDialog({
         </div>
       </form>
     </Dialog>
+  );
+}
+
+/** A small rendering of a template's diagram (a dashed placeholder for the blank canvas). */
+function TemplatePreview({ template }: { template: Template | null }) {
+  const dark = useIsDark();
+  const src = useMemo(() => {
+    if (!template) return null;
+    const snap = template.build();
+    const diagramId = Object.keys(snap.diagrams)[0]!;
+    const { svg } = renderDiagramSvg(snap, diagramId, {
+      background: null,
+      padding: 16,
+      theme: dark ? darkTheme : lightTheme,
+    });
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }, [template, dark]);
+  return (
+    <div className="mb-2 flex aspect-[2/1] items-center justify-center overflow-hidden rounded-lg bg-[var(--canvas)] p-1.5">
+      {src ? (
+        <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+      ) : (
+        <div className="size-full rounded-md border border-dashed border-app" />
+      )}
+    </div>
   );
 }
 

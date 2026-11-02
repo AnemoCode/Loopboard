@@ -15,6 +15,16 @@ import {
 interface Spec {
   nodes: Record<string, [name: string, x: number, y: number]>;
   links: [from: string, to: string, polarity: '+' | '-', bend: number, delay?: boolean][];
+  /**
+   * Optional placement and names for loop markers, matched by the nodes a loop runs through.
+   * `direction` overrides the detected one (needed for two-variable loops, which have no area).
+   */
+  loops?: {
+    through: string[];
+    at: [x: number, y: number];
+    name?: string;
+    direction?: 'cw' | 'ccw';
+  }[];
 }
 
 function build(spec: Spec): ProjectSnapshot {
@@ -44,11 +54,21 @@ function build(spec: Spec): ProjectSnapshot {
     addElement(doc, diagramId, link);
   }
   // Loop markers come from loop analysis, so type and direction are always right.
+  const snap = toSnapshot(doc);
+  const variableOf = (key: string) => {
+    const el = snap.diagrams[diagramId]!.elements[ids[key]!];
+    return el?.type === 'variable' ? el.variableId : '';
+  };
+  const sameSet = (a: string[], b: string[]) =>
+    a.length === b.length && a.every((x) => b.includes(x));
   const counts = { R: 0, B: 0 };
-  for (const loop of findLoops(toSnapshot(doc).diagrams[diagramId]!).loops) {
+  for (const loop of findLoops(snap.diagrams[diagramId]!).loops) {
     if (loop.kind === '?') continue;
+    const placed = spec.loops?.find((l) => sameSet(l.through.map(variableOf), loop.variableIds));
     const label = `${loop.kind}${++counts[loop.kind]}`;
-    const at = freeSpotNear(toSnapshot(doc).diagrams[diagramId]!, loop.center);
+    const at = placed
+      ? { x: placed.at[0], y: placed.at[1] }
+      : freeSpotNear(toSnapshot(doc).diagrams[diagramId]!, loop.center);
     addElement(doc, diagramId, {
       type: 'loop',
       layerId,
@@ -57,7 +77,9 @@ function build(spec: Spec): ProjectSnapshot {
       r: 26,
       kind: loop.kind,
       label,
-      direction: loop.direction,
+      ...(placed?.name ? { name: placed.name } : {}),
+      direction: placed?.direction ?? loop.direction,
+      loopKey: loop.key,
     });
   }
   return toSnapshot(doc);
@@ -72,65 +94,99 @@ export interface Template {
 
 export const TEMPLATES: Template[] = [
   {
-    id: 'fixes-that-fail',
-    name: 'Fixes that Fail',
+    id: 'engine-of-growth',
+    name: 'Engine of Growth',
     description:
-      'A quick fix relieves a symptom but its side effects make the problem worse later.',
+      'Innovation drives growth, and efficiency gains rebound into more consumption: two reinforcing loops.',
     build: () =>
       build({
         nodes: {
-          s: ['Problem symptom', 300, 300],
-          f: ['Quick fix', 560, 300],
-          u: ['Unintended consequences', 430, 520],
+          growth: ['Economic growth', 120, 380],
+          innovation: ['Incremental innovation', 300, 170],
+          efficiency: ['Material and energy efficiency', 660, 90],
+          costs: ['Consumer costs', 860, 400],
+          consumption: ['Consumption', 360, 580],
+          lifespan: ['Product lifespan', 560, 370],
         },
         links: [
-          ['s', 'f', '+', -0.25],
-          ['f', 's', '-', -0.25],
-          ['f', 'u', '+', -0.25, true],
-          ['u', 's', '+', -0.25],
+          ['growth', 'innovation', '+', -0.2],
+          ['innovation', 'efficiency', '+', -0.15],
+          ['efficiency', 'costs', '-', -0.2],
+          ['costs', 'consumption', '-', -0.15],
+          ['innovation', 'lifespan', '-', -0.15],
+          ['lifespan', 'consumption', '-', -0.1],
+          ['consumption', 'growth', '+', -0.2],
+        ],
+        loops: [
+          {
+            through: ['growth', 'innovation', 'lifespan', 'consumption'],
+            at: [330, 370],
+            name: 'Engine of Growth',
+          },
+          {
+            through: ['growth', 'innovation', 'efficiency', 'costs', 'consumption'],
+            at: [660, 230],
+            name: 'Consumption Rebound Effect',
+          },
         ],
       }),
   },
   {
-    id: 'limits-to-growth',
-    name: 'Limits to Growth',
-    description: 'Growth reinforces itself until a limiting condition slows it down.',
+    id: 'word-of-mouth',
+    name: 'Word of Mouth',
+    description:
+      'Word of mouth grows the customer base (reinforcing) while customer losses hold it back (balancing).',
     build: () =>
       build({
         nodes: {
-          g: ['Growing action', 200, 320],
-          p: ['Performance', 440, 320],
-          s: ['Slowing action', 680, 320],
-          l: ['Limiting condition', 680, 520],
+          sales: ['Sales from Word of Mouth', 160, 300],
+          base: ['Customer Base', 440, 300],
+          loss: ['Customer Loss Rate', 720, 300],
         },
         links: [
-          ['g', 'p', '+', -0.25],
-          ['p', 'g', '+', -0.25],
-          ['p', 's', '+', -0.25],
-          ['s', 'p', '-', -0.25],
-          ['l', 's', '+', 0],
+          ['sales', 'base', '+', -0.4],
+          ['base', 'sales', '+', -0.4],
+          ['loss', 'base', '-', 0.4],
+          ['base', 'loss', '+', 0.4],
+        ],
+        loops: [
+          { through: ['sales', 'base'], at: [300, 300], direction: 'cw' },
+          { through: ['base', 'loss'], at: [580, 300], direction: 'ccw' },
         ],
       }),
   },
   {
-    id: 'shifting-the-burden',
-    name: 'Shifting the Burden',
-    description: 'A symptomatic solution weakens the capacity for a fundamental solution.',
+    id: 'perceived-quality',
+    name: 'Perceived Quality',
+    description:
+      'A balancing quality loop slowed by delays and skewed by biases in how management perceives quality.',
     build: () =>
       build({
         nodes: {
-          s: ['Problem symptom', 400, 340],
-          q: ['Symptomatic solution', 400, 140],
-          f: ['Fundamental solution', 400, 560],
-          e: ['Side effect', 720, 340],
+          quality: ['Product Quality', 120, 210],
+          reported: ['Reported Product Quality', 420, 170],
+          reportingBias: ['Bias in Reporting System', 290, 40],
+          perception: ['Management Perception of Product Quality', 620, 370],
+          managementBias: ['Management Bias Toward High Quality', 840, 190],
+          desired: ['Desired Product Quality', 860, 440],
+          shortfall: ['Quality Shortfall', 560, 560],
+          programs: ['Quality Improvement Programs', 200, 560],
         },
         links: [
-          ['s', 'q', '+', -0.28],
-          ['q', 's', '-', -0.28],
-          ['s', 'f', '+', 0.28],
-          ['f', 's', '-', 0.28, true],
-          ['q', 'e', '+', -0.3],
-          ['e', 'f', '-', -0.3],
+          ['quality', 'reported', '+', -0.12, true],
+          ['reported', 'perception', '+', -0.12, true],
+          ['perception', 'shortfall', '-', -0.1],
+          ['shortfall', 'programs', '+', -0.1, true],
+          ['programs', 'quality', '+', -0.15, true],
+          ['reportingBias', 'reported', '+', 0.12],
+          ['managementBias', 'perception', '+', 0],
+          ['desired', 'shortfall', '+', 0],
+        ],
+        loops: [
+          {
+            through: ['quality', 'reported', 'perception', 'shortfall', 'programs'],
+            at: [370, 380],
+          },
         ],
       }),
   },
