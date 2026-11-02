@@ -24,6 +24,7 @@ A browser-based, real-time collaborative editor for **causal loop diagrams (CLDs
 | 14 | [Risks & Open Questions](14-risks-and-open-questions.md) | What could go wrong, and the decisions still open |
 | 15 | [Implementation Notes](15-implementation-notes.md) | **What was actually built**, deviations from this plan and why, test coverage |
 | 16 | [Guest Access via Share Links](16-guest-access.md) | Plan: join through a link with just a name, upgrade to an account later |
+| 17 | [Start Without an Account](17-guest-projects.md) | Guests create and import their own projects; an account is needed only to share |
 
 > **Status:** implemented. Docs 01–14 are the original plan; [15 — Implementation Notes](15-implementation-notes.md) describes the code as built, including where it intentionally differs (single server process, cookie-authenticated WebSocket, client-side exports, no Redis/MinIO).
 

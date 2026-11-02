@@ -72,6 +72,8 @@ Opening `/invite/:token` no longer requires signing in:
 
 ## What guests can and cannot do
 
+> **Update:** since [doc 17](17-guest-projects.md), guests can also create, import, duplicate, rename and delete **their own** projects (up to 3). Managing access still needs an account. The table below describes guests who joined someone else's project.
+
 **Rule:** a guest can do everything their role allows *inside* a project, but nothing that creates projects or manages access.
 
 | Action | Guest (editor) | Guest (commenter/viewer) |
@@ -149,7 +151,7 @@ No changes. The guest has a normal session cookie, so `onAuthenticate` works as 
 
 ### Housekeeping
 
-A daily cleanup on the server (`setInterval` at startup, no job queue) deletes anonymous users who have **no memberships**, or whose **last session is more than 90 days old**. Their comments keep the author's name, which the document stores alongside the `authorId`.
+A daily cleanup on the server (`setInterval` at startup, no job queue) deletes anonymous users who have **no memberships**, or who have **no unexpired session** left (changed from 90 days of inactivity in [doc 17](17-guest-projects.md)). Their comments keep the author's name, which the document stores alongside the `authorId`.
 
 ## Security and abuse
 

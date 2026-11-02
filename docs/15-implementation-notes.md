@@ -63,6 +63,7 @@ Three containers: `db`, `server`, `web`. Workspace packages:
 | Command palette (⌘K) with variable search across diagrams | ✅ |
 | Undo/redo (your own changes only), copy/paste/duplicate across projects, snapping guides, keyboard shortcuts | ✅ |
 | Guest access: join through a share link with only a name, upgrade to an account later ([16](16-guest-access.md)) | ✅ |
+| Start without an account: guests create/import up to 3 own projects; sharing needs an account ([17](17-guest-projects.md)) | ✅ |
 | Change history: who changed what, live, with moves grouped (see below) | ✅ |
 | Docker (compose stack with Caddy), CI workflow | ✅ |
 
@@ -100,8 +101,8 @@ Still unverified (needs a Vensim installation): the encoding of delay marks, box
 | `packages/model` | 16 | Commands, cascades, shadows, z-order, copy/paste, loop analysis, changelog descriptions, **property-based convergence of 3 concurrently editing replicas** (150 runs) |
 | `packages/mdl` | 13 | Byte-identical round-trips (direct and through Yjs), semantics of both fixtures, edit-then-export, export of non-Vensim projects, 300-run corruption fuzzing |
 | `packages/render` | 8 | Metrics and wrapping, arcs, link clipping, deterministic SVG, XML escaping |
-| `apps/server` | 18 | Auth, CSRF, projects, import → live export, real WebSocket sync, presence, read-only enforcement, outsider refusal, revocation, persistence, commenter API, versions, duplicate/delete, pending invites, guest access (join, restrictions, revocation, upgrade/merge, cleanup), changelog (attribution, grouping, live notification, paging) |
-| `e2e` (Playwright) | 14 | Editing flows, multi-user collaboration (cursors, selections, live drags, follow), comments, roles, invite links, byte-identical `.mdl` export from the browser, PNG/SVG/PDF/JSON downloads, versions, command palette, no console/CSP errors, guest join/upgrade/revocation, live History panel |
+| `apps/server` | 25 | Auth, CSRF, projects, import → live export, real WebSocket sync, presence, read-only enforcement, outsider refusal, revocation, persistence, commenter API, versions, duplicate/delete, pending invites, guest access (join, restrictions, revocation, upgrade/merge, cleanup), guest projects (start session, own projects and limit, sharing needs an account, ownership on upgrade, expiry cleanup), changelog (attribution, grouping, live notification, paging) |
+| `e2e` (Playwright) | 16 | Editing flows, multi-user collaboration (cursors, selections, live drags, follow), comments, roles, invite links, byte-identical `.mdl` export from the browser, PNG/SVG/PDF/JSON downloads, versions, command palette, no console/CSP errors, guest join/upgrade/revocation, start without an account → sign up when sharing, live History panel |
 
 The end-to-end suite runs both against the dev servers and against the production Docker stack (`BASE_URL=http://localhost:8080`).
 
@@ -111,3 +112,8 @@ The end-to-end suite runs both against the dev servers and against the productio
 - Text in PDF exports uses the PDF base fonts, so characters outside Windows-1252 (e.g. CJK) are not rendered in PDFs. SVG and PNG are fine.
 - Touch devices can view, select and drag, but pinch-zoom isn't implemented.
 - Exports render the diagram's styling; comment pins are not included in exports.
+
+## Loop markers belong to loops
+
+A loop marker stores the loop it marks (`loopKey`, the loop's variable ids in canonical order), set by *Add marker* and by the templates. `matchLoopMarkers()` (`@cld/model`) links markers to detected loops: first by `loopKey`, then (for imported Vensim markers or loops that changed) by pairing each remaining marker with the nearest loop of the same type it sits inside, one loop per marker. The Loops panel shows *Marked R1 · name* (click selects the marker), and a selected marker shows which loop it marks and offers a fix when the loop's type has changed. `loopKey` is not written to Vensim files, so `.mdl` round-trips stay identical.
+
