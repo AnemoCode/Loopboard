@@ -427,7 +427,13 @@ function exitParam(curve: Curve, b: Boundary, from: number, to: number): number 
   return from;
 }
 
-function selfLoop(b: Boundary): { d: string; tip: Point; dir: Point; mid: Point } {
+function selfLoop(b: Boundary): {
+  d: string;
+  tip: Point;
+  dir: Point;
+  mid: Point;
+  apex: Point;
+} {
   const hw = b.kind === 'rect' ? b.hw : b.rx;
   const hh = b.kind === 'rect' ? b.hh : b.ry;
   const sx = b.cx + hw * 0.35;
@@ -443,6 +449,8 @@ function selfLoop(b: Boundary): { d: string; tip: Point; dir: Point; mid: Point 
     tip: { x: ex, y: ey },
     dir: { x: (ex - c2.x) / dl, y: (ey - c2.y) / dl },
     mid: { x: ex + 18, y: top - 18 },
+    // Point on the curve at t = 0.5.
+    apex: { x: (sx + 3 * c1.x + 3 * c2.x + ex) / 8, y: (top + 3 * c1.y + 3 * c2.y + ey) / 8 },
   };
 }
 
@@ -463,22 +471,25 @@ function layoutLink(
   const headSize = 7 + width * 2;
   const prims: Prim[] = [];
   const polFont: Font = { family: 'sans', size: 14, bold: true, italic: false };
+  // Outside (default) = the convex side of the curve; inside = towards the loop it closes.
+  const inside = el.style?.polaritySide === 'inside';
 
   if (el.from === el.to) {
     const s = selfLoop(fb);
     prims.push({ t: 'path', d: s.d, stroke: color, width, dash: el.style?.dash, cap: 'round' });
     if (head !== 'none') prims.push(arrowHead(s.tip, s.dir, headSize, color, head));
-    if (el.polarity)
-      prims.push(
-        textBlock(
-          [POLARITY_GLYPH[el.polarity]!],
-          polFont,
-          s.mid.x + 8,
-          s.mid.y - 8,
-          'middle',
-          color,
-        ),
-      );
+    if (el.polarity) {
+      // Inside: in the gap between the curl and the node, just under the curve's apex.
+      const pos = inside
+        ? (() => {
+            const dx = fb.cx - s.apex.x;
+            const dy = fb.cy - s.apex.y;
+            const l = Math.hypot(dx, dy) || 1;
+            return { x: s.apex.x + (dx / l) * 11, y: s.apex.y + (dy / l) * 11 };
+          })()
+        : { x: s.mid.x + 8, y: s.mid.y - 8 };
+      prims.push(textBlock([POLARITY_GLYPH[el.polarity]!], polFont, pos.x, pos.y, 'middle', color));
+    }
     return {
       id: el.id,
       type: 'link',
@@ -510,7 +521,7 @@ function layoutLink(
     const tp = Math.max(t0, t1 - (headSize + 7) / len);
     const p = curve.at(tp);
     const n = curve.outward(tp);
-    const off = 10;
+    const off = inside ? -10 : 10;
     const pos = { x: p.x + n.x * off, y: p.y + n.y * off };
     prims.push(textBlock([POLARITY_GLYPH[el.polarity]!], polFont, pos.x, pos.y, 'middle', color));
     extra.push(pos);
