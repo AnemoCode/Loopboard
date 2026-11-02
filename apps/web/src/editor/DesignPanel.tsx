@@ -492,6 +492,22 @@ function LinkSection({ links }: { links: Link[] }) {
           { value: 'none', label: 'None', title: 'No polarity' },
         ]}
       />
+      {links.some((l) => l.polarity) && (
+        <Row label="Side">
+          <Segmented
+            size="sm"
+            value={common(links.map((l) => l.style?.polaritySide ?? 'outside')) ?? null}
+            onChange={(side) =>
+              // 'outside' is the default, so store it as "unset" to keep documents lean.
+              applyStyle(ctx, ids, { polaritySide: side === 'inside' ? 'inside' : undefined })
+            }
+            options={[
+              { value: 'outside', label: 'Outside', title: 'On the outer side of the curve' },
+              { value: 'inside', label: 'Inside', title: 'On the inner side of the curve' },
+            ]}
+          />
+        </Row>
+      )}
       <label className="flex cursor-pointer items-center justify-between rounded-lg px-1 py-1 text-sm text-app">
         <span>
           Delay mark <span className="text-xs text-muted">(‖)</span>
