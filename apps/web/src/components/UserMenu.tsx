@@ -103,7 +103,7 @@ export function UserMenu() {
         open={dialog === 'end'}
         onOpenChange={(o) => !o && setDialog(null)}
         title="End guest session?"
-        description="You'll lose access to the projects you joined as a guest on this device. You can rejoin through a share link, or create an account to keep access."
+        description="Projects you created as a guest will be deleted, and you'll lose access to the ones you joined. Create an account to keep them, or rejoin shared projects through their link."
         footer={
           <>
             <Button onClick={() => navigate(`/signup?next=${here}`)}>Create account</Button>

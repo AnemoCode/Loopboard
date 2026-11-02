@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, Copy, Link2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import {
   atLeast,
@@ -34,6 +35,8 @@ export function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => vo
   const [inviteRole, setInviteRole] = useState<InvitableRole>('editor');
   const [busy, setBusy] = useState(false);
   const [revoking, setRevoking] = useState<ShareLink | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const refresh = () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: keys.members(projectId) }),
@@ -77,6 +80,25 @@ export function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => vo
       description="Everyone with access sees changes live."
       wide
     >
+      {isGuest && role === 'owner' && (
+        <div className="rounded-xl border border-accent-200 bg-accent-50 p-4 dark:border-accent-500/30 dark:bg-accent-500/10">
+          <h3 className="font-medium text-app">Create a free account to share</h3>
+          <p className="mt-1 text-sm text-muted">
+            You're working as a guest. To invite others, this project needs an owner with an account,
+            otherwise everyone would lose it if this browser's data is cleared.
+          </p>
+          <Button
+            variant="primary"
+            className="mt-3"
+            onClick={() =>
+              navigate(`/signup?next=${encodeURIComponent(location.pathname + location.search)}`)
+            }
+          >
+            Create free account
+          </Button>
+        </div>
+      )}
+
       {canManage && (
         <ShareLinks links={links.data} loading={links.isLoading} run={run} onRevoke={setRevoking} />
       )}
@@ -193,7 +215,7 @@ export function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => vo
           ))}
         </ul>
       )}
-      {isGuest && (
+      {isGuest && role !== 'owner' && (
         <p className="mt-4 text-sm text-muted">
           You're a guest. Ask the project owner if you'd like to invite others.
         </p>

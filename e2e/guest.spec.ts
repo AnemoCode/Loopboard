@@ -81,7 +81,8 @@ test.describe('guest access', () => {
     // Guest dashboard variant.
     await guest.goto('/');
     await expect(guest.getByText('Keep your projects')).toBeVisible();
-    await expect(guest.getByRole('button', { name: 'New project' })).toHaveCount(0);
+    // Guests can start their own projects too (see the "start without an account" test).
+    await expect(guest.getByRole('button', { name: 'New project' })).toBeVisible();
     await guest.getByRole('link', { name: 'Open Closed later' }).click();
     await expect(guest.getByTestId('canvas')).toBeVisible();
 
@@ -108,5 +109,46 @@ test.describe('guest access', () => {
     await owner.context.close();
     await ctx.close();
     await ctx2.close();
+  });
+
+  test('a visitor starts drawing without an account and signs up when sharing', async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Start drawing — no account needed' }).click();
+
+    // Straight into the template picker.
+    const dialog = page.getByRole('dialog', { name: 'New project' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('Name').fill('My first loop');
+    await dialog.getByRole('button', { name: 'Create project' }).click();
+    await expect(page.getByTestId('canvas')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Keep your work' })).toBeVisible();
+    await addVariable(page, 'Curiosity', 400, 300);
+
+    // Sharing asks for an account.
+    await page.getByRole('button', { name: 'Share' }).click();
+    await expect(page.getByText('Create a free account to share')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Create link|New link/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Create free account' }).click();
+    await expect(page.getByRole('heading', { name: 'Keep your projects' })).toBeVisible();
+    await page.getByLabel('Name').fill('Sam');
+    await page.getByLabel('Email').fill(uniqueEmail('sam'));
+    await page.getByLabel('Password').fill(PASSWORD);
+    await page.getByRole('button', { name: 'Create account' }).click();
+
+    // Back in the same project, now owned by the account, and sharing works.
+    await expect(page.getByText('Your projects are now saved to your account.')).toBeVisible();
+    await expect(variable(page, 'Curiosity')).toHaveCount(1);
+    await expect(page.getByRole('link', { name: 'Keep your work' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Share' }).click();
+    await expect(page.getByRole('button', { name: /Create link|New link/ })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: 'Open My first loop' })).toBeVisible();
+
+    await ctx.close();
   });
 });

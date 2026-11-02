@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import { LogoMark } from '../components/Logo';
 import { Button, Field, Input } from '../components/ui';
+import { api, errorMessage } from '../lib/api';
 import { authClient } from '../lib/auth';
 import { useConfig, useMe } from '../lib/queries';
 
@@ -19,11 +20,13 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const guest = me.data?.isGuest ?? false;
-  const [name, setName] = useState(guest ? me.data!.name : '');
+  // Guests who started without a link are just called "Guest"; don't pre-fill that.
+  const [name, setName] = useState(guest && me.data!.name !== 'Guest' ? me.data!.name : '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   // Guests may sign up / sign in: their projects and comments move to the account.
   if (me.data && !guest) return <Navigate to={next} replace />;
@@ -44,6 +47,19 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
     await qc.invalidateQueries();
     if (guest) toast.success('Your projects are now saved to your account.');
     navigate(next, { replace: true });
+  };
+
+  /** "Start drawing — no account needed": a guest session, then straight to a new project. */
+  const startAsGuest = async () => {
+    setStarting(true);
+    try {
+      await api('/guest', { method: 'POST', body: {} });
+      await qc.invalidateQueries();
+      navigate(next === '/' ? '/?new=1' : next, { replace: true });
+    } catch (e) {
+      setError(errorMessage(e));
+      setStarting(false);
+    }
   };
 
   const social = async (provider: 'google' | 'github') => {
@@ -67,7 +83,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
           </h1>
           <p className="mt-1 text-sm text-muted">
             {guest
-              ? 'Your guest access only lives in this browser. With an account you keep your projects and comments on every device.'
+              ? 'Your guest work only lives in this browser. With an account you keep your projects and comments on every device, and can share them.'
               : 'Draw causal loop diagrams together, in real time.'}
           </p>
         </div>
@@ -135,6 +151,21 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
             </Button>
           </form>
         </div>
+        {!guest && (
+          <div className="mt-6">
+            <div className="mb-4 flex items-center gap-3 text-xs text-muted">
+              <span className="h-px flex-1 bg-[var(--border)]" />
+              or
+              <span className="h-px flex-1 bg-[var(--border)]" />
+            </div>
+            <Button className="w-full" loading={starting} onClick={startAsGuest}>
+              Start drawing — no account needed
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted">
+              Your work stays in this browser until you create an account.
+            </p>
+          </div>
+        )}
         <p className="mt-6 text-center text-sm text-muted">
           {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
           <Link

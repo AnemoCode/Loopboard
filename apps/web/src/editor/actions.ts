@@ -182,6 +182,7 @@ export function placeLoopMarker(
       kind,
       label: `${prefix}${used + 1}`,
       direction: loop.direction,
+      loopKey: loop.key,
     },
     LOCAL,
   );

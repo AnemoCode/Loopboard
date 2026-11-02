@@ -18,9 +18,10 @@ import {
   Share2,
   Trash2,
   Undo2,
+  UserPlus,
 } from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { toast } from 'sonner';
 import {
   addDiagram,
@@ -55,7 +56,8 @@ import { useEditor } from './store';
 
 export function TopBar({ peers }: { peers: Peer[] }) {
   const ctx = useEditorCtx();
-  const { session, canEdit, role } = ctx;
+  const { session, canEdit, role, isGuest } = ctx;
+  const location = useLocation();
   const set = useEditor((s) => s.set);
   const panelOpen = useEditor((s) => s.panelOpen);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -121,6 +123,24 @@ export function TopBar({ peers }: { peers: Peer[] }) {
       )}
       <DiagramTabs peers={peers} />
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        {isGuest && (
+          <div className="flex items-center gap-2">
+            <span className="hidden items-center gap-1 text-xs font-medium text-amber-700 xl:inline-flex dark:text-amber-300">
+              <CloudOff className="size-3.5" />
+              Only saved in this browser
+            </span>
+            <Tooltip content="You're a guest: your work only lives in this browser. Create a free account to keep it on every device and share it.">
+              <Link
+                to={`/signup?next=${encodeURIComponent(location.pathname + location.search)}`}
+                aria-label="Keep your work"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-amber-400 px-2.5 text-sm font-semibold text-amber-950 shadow-sm ring-1 ring-amber-500/50 transition-colors hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 sm:px-3"
+              >
+                <UserPlus className="size-4" />
+                <span className="hidden sm:inline">Keep your work</span>
+              </Link>
+            </Tooltip>
+          </div>
+        )}
         <SyncBadge status={status} />
         <Presence peers={peers} />
         {!canEdit && (
@@ -208,9 +228,9 @@ export function TopBar({ peers }: { peers: Peer[] }) {
 }
 
 function ProjectTitle() {
-  const { projectId, projectName, canEdit: canEditDoc, isGuest } = useEditorCtx();
-  // Renaming the project needs an account.
-  const canEdit = canEditDoc && !isGuest;
+  const { projectId, projectName, canEdit: canEditDoc, isGuest, role } = useEditorCtx();
+  // Guests may rename only the projects they own.
+  const canEdit = canEditDoc && (!isGuest || role === 'owner');
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(projectName);
