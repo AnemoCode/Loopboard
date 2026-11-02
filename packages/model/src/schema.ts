@@ -77,6 +77,7 @@ export const elementSchema = z.discriminatedUnion('type', [
     label: z.string().max(200),
     name: z.string().max(500).optional(),
     direction: z.enum(['cw', 'ccw']),
+    loopKey: z.string().max(10_000).optional(),
   }),
   z.object({
     ...base,

@@ -100,6 +100,8 @@ export interface LoopMarker extends ElementBase {
   label: string;
   name?: string;
   direction: 'cw' | 'ccw';
+  /** The detected loop this marker belongs to (`FoundLoop.key`: its variable ids). */
+  loopKey?: string;
 }
 
 export type ShapeKind = 'rect' | 'rounded' | 'ellipse' | 'diamond';

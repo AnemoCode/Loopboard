@@ -13,6 +13,7 @@ import {
   deleteLayer,
   duplicateDiagram,
   findLoops,
+  matchLoopMarkers,
   initDoc,
   moveElements,
   pasteElements,
@@ -217,6 +218,47 @@ describe('loop analysis', () => {
     const tri = loops.find((l) => l.variableIds.length === 3)!;
     expect(tri.kind).toBe('B');
     expect(tri.direction).toBe('cw');
+  });
+
+  it('links markers to their loops by key, falling back to the nearest matching loop', () => {
+    const { doc, diagramId, layerId } = setup();
+    const a = addVariableNode(doc, diagramId, { name: 'A', x: 0, y: 0, layerId });
+    const b = addVariableNode(doc, diagramId, { name: 'B', x: 100, y: 100, layerId });
+    const c = addVariableNode(doc, diagramId, { name: 'C', x: -100, y: 100, layerId });
+    link(doc, diagramId, layerId, a, b, '+');
+    link(doc, diagramId, layerId, b, c, '-');
+    link(doc, diagramId, layerId, c, a, '+');
+    link(doc, diagramId, layerId, a, c, '+');
+    const loops = findLoops(toSnapshot(doc).diagrams[diagramId]!).loops;
+    const tri = loops.find((l) => l.variableIds.length === 3)!;
+    const pair = loops.find((l) => l.variableIds.length === 2)!;
+    const marker = (extra: object) =>
+      addElement(doc, diagramId, {
+        type: 'loop',
+        layerId,
+        x: 0,
+        y: 60,
+        r: 26,
+        kind: 'B',
+        label: 'B1',
+        direction: 'cw',
+        ...extra,
+      });
+
+    // Far from the triangle's centre, but it names its loop.
+    const keyed = marker({ x: 400, y: 400, loopKey: tri.key });
+    let m = matchLoopMarkers(toSnapshot(doc).diagrams[diagramId]!, loops);
+    expect(m.get(tri.key)).toBe(keyed);
+    expect(m.has(pair.key)).toBe(false);
+
+    // A marker without a key goes to the nearest loop of its type it sits in, one loop per marker.
+    deleteElements(doc, diagramId, [keyed]);
+    const near = marker({ kind: 'R', label: 'R1', x: -50, y: 50 });
+    const far = marker({ kind: 'R', label: 'R2', x: 2000, y: 2000 });
+    m = matchLoopMarkers(toSnapshot(doc).diagrams[diagramId]!, loops);
+    expect(m.get(pair.key)).toBe(near);
+    expect(m.has(tri.key)).toBe(false); // the R markers can't mark a balancing loop
+    expect([...m.values()]).not.toContain(far);
   });
 });
 

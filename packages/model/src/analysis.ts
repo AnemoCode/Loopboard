@@ -1,5 +1,5 @@
 import { centroid, signedArea } from './geometry.js';
-import type { Diagram, Point, Polarity } from './types.js';
+import type { Diagram, LoopMarker, Point, Polarity } from './types.js';
 
 export interface FoundLoop {
   /** Stable key: variable ids in canonical rotation. */
@@ -129,4 +129,53 @@ export function freeSpotNear(diagram: Diagram, center: Point, clearance = 46): P
     }
   }
   return { x: Math.round(center.x), y: Math.round(center.y) };
+}
+
+const kindsMatch = (marker: LoopMarker, loop: FoundLoop) =>
+  marker.kind === 'custom' || loop.kind === '?' || marker.kind === loop.kind;
+
+/**
+ * Which marker belongs to which loop (loop key → marker id); each marker marks at most one loop.
+ * Markers that name their loop (`loopKey`) are linked to it. Others (imported from Vensim, or whose
+ * loop changed) are paired with the nearest loop of the same type whose area they sit in.
+ */
+export function matchLoopMarkers(diagram: Diagram, loops: FoundLoop[]): Map<string, string> {
+  const markers = Object.values(diagram.elements).filter((e): e is LoopMarker => e.type === 'loop');
+  const byKey = new Map(loops.map((l) => [l.key, l]));
+  const result = new Map<string, string>();
+  const free: LoopMarker[] = [];
+  for (const m of markers) {
+    if (m.loopKey && byKey.has(m.loopKey) && !result.has(m.loopKey)) result.set(m.loopKey, m.id);
+    else free.push(m);
+  }
+  const pos = new Map<string, Point>();
+  for (const el of Object.values(diagram.elements))
+    if (el.type === 'variable' && (!pos.has(el.variableId) || !el.isShadow))
+      pos.set(el.variableId, { x: el.x, y: el.y });
+  const pairs: { loop: string; marker: string; d: number }[] = [];
+  for (const loop of loops) {
+    if (result.has(loop.key)) continue;
+    // How far the loop's variables are from its centre: a marker within that reach sits inside it.
+    const reach = Math.max(
+      80,
+      Math.max(
+        ...loop.variableIds.map((v) => {
+          const p = pos.get(v);
+          return p ? Math.hypot(p.x - loop.center.x, p.y - loop.center.y) : 0;
+        }),
+      ) * 0.9,
+    );
+    for (const m of free) {
+      const d = Math.hypot(m.x - loop.center.x, m.y - loop.center.y);
+      if (d <= reach && kindsMatch(m, loop)) pairs.push({ loop: loop.key, marker: m.id, d });
+    }
+  }
+  pairs.sort((a, b) => a.d - b.d);
+  const used = new Set<string>();
+  for (const p of pairs) {
+    if (result.has(p.loop) || used.has(p.marker)) continue;
+    result.set(p.loop, p.marker);
+    used.add(p.marker);
+  }
+  return result;
 }
