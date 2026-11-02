@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import {
   findLoops,
+  matchLoopMarkers,
   renameVariable,
   updateElement,
   updateVariable,
@@ -542,8 +543,55 @@ function LinkSection({ links }: { links: Link[] }) {
 
 function LoopSection({ loop }: { loop: LoopMarker }) {
   const ctx = useEditorCtx();
+  const view = useDocView(ctx.store);
+  const diagramId = useEditor((s) => s.diagramId);
+  const set = useEditor((s) => s.set);
+  const diagram = diagramId ? view.snapshot.diagrams[diagramId] : undefined;
+  const found = diagram ? findLoops(diagram).loops : [];
+  const key = diagram
+    ? [...matchLoopMarkers(diagram, found)].find(([, m]) => m === loop.id)?.[0]
+    : undefined;
+  const marks = found.find((l) => l.key === key);
+  const mismatch =
+    marks && marks.kind !== '?' && loop.kind !== 'custom' && marks.kind !== loop.kind;
+  const name = (id: string) => view.variables[id]?.name ?? '?';
   return (
     <Section title="Loop">
+      <div
+        className="rounded-lg bg-surface-2 px-2.5 py-2 text-xs"
+        onMouseEnter={() => marks && set({ highlight: marks.linkIds })}
+        onMouseLeave={() => set({ highlight: [] })}
+      >
+        {marks ? (
+          <>
+            <span className="text-muted">Marks </span>
+            <span className="text-app">
+              {[...marks.variableIds, marks.variableIds[0]!].map(name).join(' → ')}
+            </span>
+          </>
+        ) : (
+          <span className="text-muted">Not attached to a detected loop.</span>
+        )}
+        {mismatch && (
+          <div className="mt-1.5 flex items-center gap-2 text-amber-700 dark:text-amber-300">
+            This loop is {marks.kind === 'R' ? 'reinforcing' : 'balancing'} now.
+            {ctx.canEdit && (
+              <button
+                className="font-medium underline"
+                onClick={() => {
+                  const prefixed = /^[RB]\d*$/.test(loop.label);
+                  patchElements(ctx, [loop.id], {
+                    kind: marks.kind as 'R' | 'B',
+                    ...(prefixed ? { label: marks.kind + loop.label.slice(1) } : {}),
+                  });
+                }}
+              >
+                Fix
+              </button>
+            )}
+          </div>
+        )}
+      </div>
       <Segmented
         value={loop.kind}
         onChange={(kind) => {

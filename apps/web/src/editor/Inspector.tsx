@@ -20,6 +20,7 @@ import {
   byKey,
   deleteLayer,
   findLoops,
+  matchLoopMarkers,
   keyBetween,
   moveToLayer,
   updateLayer,
@@ -266,8 +267,11 @@ function LoopsPanel() {
   const set = useEditor((s) => s.set);
   const diagram = diagramId ? view.snapshot.diagrams[diagramId] : undefined;
   const result = useMemo(() => (diagram ? findLoops(diagram) : null), [diagram]);
+  const marked = useMemo(
+    () => (diagram && result ? matchLoopMarkers(diagram, result.loops) : new Map<string, string>()),
+    [diagram, result],
+  );
   if (!diagram || !result) return null;
-  const markers = Object.values(diagram.elements).filter((e) => e.type === 'loop');
   const name = (id: string) => view.variables[id]?.name ?? '?';
   const counts = {
     R: result.loops.filter((l) => l.kind === 'R').length,
@@ -282,11 +286,9 @@ function LoopsPanel() {
       </p>
       <ul className="mt-3 space-y-1.5">
         {result.loops.map((loop) => {
-          const placed = markers.some(
-            (m) =>
-              Math.hypot(m.x - loop.center.x, m.y - loop.center.y) < 60 &&
-              (m.kind === loop.kind || loop.kind === '?'),
-          );
+          const markerId = marked.get(loop.key);
+          const marker = markerId ? diagram.elements[markerId] : undefined;
+          const placed = marker?.type === 'loop';
           return (
             <li
               key={loop.key}
@@ -325,7 +327,16 @@ function LoopsPanel() {
                     <RefreshCw className="size-3" /> Add marker
                   </button>
                 )}
-                {placed && <span className="ml-auto text-xs text-muted">Marked</span>}
+                {placed && (
+                  <button
+                    className="ml-auto min-w-0 truncate text-xs text-muted hover:text-app hover:underline"
+                    title="Select this loop's marker"
+                    onClick={() => set({ selection: [marker.id] })}
+                  >
+                    Marked {marker.label}
+                    {marker.name ? ` · ${marker.name}` : ''}
+                  </button>
+                )}
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-app">
                 {[...loop.variableIds, loop.variableIds[0]!].map(name).join(' → ')}

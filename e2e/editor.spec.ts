@@ -10,6 +10,7 @@ import {
   loops,
   signUp,
   variable,
+  newUser,
 } from './helpers';
 
 test.describe('single-user editing', () => {
@@ -218,4 +219,22 @@ test('command palette finds variables across diagrams', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.getByRole('tab', { name: 'Main' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByLabel('Variable name')).toHaveValue('Customer satisfaction');
+});
+
+test('every template loop comes with its own marker', async ({ browser }) => {
+  const { page, context } = await newUser(browser, 'Tina');
+  const expected = { 'Engine of Growth': 2, 'Word of Mouth': 2, 'Perceived Quality': 1 };
+  for (const [name, count] of Object.entries(expected)) {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'New project' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'New project' });
+    await dialog.getByRole('button', { name: new RegExp(`^${name}`) }).click();
+    await dialog.getByRole('button', { name: 'Create project' }).click();
+    await expect(canvas(page)).toBeVisible();
+    await expect(page.locator('[data-type="loop"]')).toHaveCount(count);
+    await page.getByRole('tab', { name: 'Loops' }).click();
+    await expect(page.getByRole('button', { name: /^Marked / })).toHaveCount(count);
+    await expect(page.getByRole('button', { name: 'Add marker' })).toHaveCount(0);
+  }
+  await context.close();
 });
