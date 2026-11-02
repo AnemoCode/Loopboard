@@ -59,7 +59,18 @@ export interface ElementLayout {
   /** Where links attach and get clipped (variable nodes). */
   boundary?: Boundary;
   /** Link geometry used by the editor for handles and hit-testing. */
-  link?: { d: string; start: Point; end: Point; handle: Point };
+  link?: {
+    d: string;
+    start: Point;
+    end: Point;
+    handle: Point;
+    /**
+     * Where the polarity sign sits (`at`) and where it would sit on the other side of the line
+     * (`alt`). `auto`: the side wasn't chosen explicitly, so the layout may flip it to avoid
+     * another sign.
+     */
+    polarity?: { at: Point; alt: Point; auto: boolean };
+  };
   /** Area + font of editable text, for the inline editor overlay. */
   text?: { box: Box; font: Font; align: 'left' | 'center' | 'right'; value: string };
 }
@@ -461,6 +472,8 @@ function layoutLink(
   from: ElementLayout | undefined,
   to: ElementLayout | undefined,
   theme: Theme,
+  /** Put an automatically placed polarity sign on the other side (to avoid a collision). */
+  flipPolarity = false,
 ): ElementLayout | null {
   const fb = from?.boundary;
   const tb = to?.boundary;
@@ -472,7 +485,8 @@ function layoutLink(
   const prims: Prim[] = [];
   const polFont: Font = { family: 'sans', size: 14, bold: true, italic: false };
   // Outside (default) = the convex side of the curve; inside = towards the loop it closes.
-  const inside = el.style?.polaritySide === 'inside';
+  const autoSide = el.style?.polaritySide === undefined;
+  const inside = autoSide ? flipPolarity : el.style?.polaritySide === 'inside';
 
   if (el.from === el.to) {
     const s = selfLoop(fb);
@@ -517,6 +531,7 @@ function layoutLink(
   if (head !== 'none') prims.push(arrowHead(tip, dir, headSize, color, head));
 
   const extra: Point[] = [];
+  let polarity: { at: Point; alt: Point; auto: boolean } | undefined;
   if (el.polarity) {
     const tp = Math.max(t0, t1 - (headSize + 7) / len);
     const p = curve.at(tp);
@@ -525,6 +540,7 @@ function layoutLink(
     const pos = { x: p.x + n.x * off, y: p.y + n.y * off };
     prims.push(textBlock([POLARITY_GLYPH[el.polarity]!], polFont, pos.x, pos.y, 'middle', color));
     extra.push(pos);
+    polarity = { at: pos, alt: { x: p.x - n.x * off, y: p.y - n.y * off }, auto: autoSide };
   }
   const tm = (t0 + t1) / 2;
   if (el.delay) {
@@ -562,8 +578,50 @@ function layoutLink(
     type: 'link',
     prims,
     bbox: pointBox([...samples, ...extra], 8),
-    link: { d: curve.path(t0, t1), start: curve.at(t0), end: tip, handle },
+    link: { d: curve.path(t0, t1), start: curve.at(t0), end: tip, handle, polarity },
   };
+}
+
+/** Polarity signs closer than this (centre to centre) read as one. */
+const SIGN_CLEARANCE = 18;
+
+/**
+ * Links whose automatically placed polarity sign should move to the other side of the line, because
+ * it would overlap another sign (e.g. two links arriving at the same variable from either side).
+ * For each colliding pair, picks the flip (one, the other, or both) that separates the signs most.
+ */
+export function polarityFlips(signs: { id: string; at: Point; alt: Point; auto: boolean }[]) {
+  const flipped = new Set<string>();
+  const pos = (s: (typeof signs)[number], flip: Set<string>) => (flip.has(s.id) ? s.alt : s.at);
+  const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+  for (let i = 0; i < signs.length; i++) {
+    for (let j = i + 1; j < signs.length; j++) {
+      const a = signs[i]!;
+      const b = signs[j]!;
+      if (dist(pos(a, flipped), pos(b, flipped)) >= SIGN_CLEARANCE) continue;
+      const options = [[a], [b], [a, b]].filter((o) => o.every((s) => s.auto));
+      let best: { flip: Set<string>; score: number } | null = null;
+      for (const o of options) {
+        const flip = new Set(flipped);
+        for (const s of o) {
+          if (flip.has(s.id)) flip.delete(s.id);
+          else flip.add(s.id);
+        }
+        // Separation of this pair, but never at the cost of landing on a third sign.
+        let score = dist(pos(a, flip), pos(b, flip));
+        for (const s of o)
+          for (const other of signs)
+            if (other !== a && other !== b)
+              score = Math.min(score, dist(pos(s, flip), pos(other, flip)));
+        if (!best || score > best.score + 0.5) best = { flip, score };
+      }
+      if (best && best.score > dist(pos(a, flipped), pos(b, flipped))) {
+        flipped.clear();
+        for (const id of best.flip) flipped.add(id);
+      }
+    }
+  }
+  return flipped;
 }
 
 // ------------------------------------------------------------------ diagram
@@ -639,14 +697,34 @@ export function layoutDiagram(
             : cache.get(el.id, [el, theme], () => layoutText(el, theme));
     if (layout) byId.set(el.id, layout);
   }
+  const links: Link[] = [];
   for (const el of all) {
     if (el.type !== 'link') continue;
+    links.push(el);
     const from = byId.get(el.from);
     const to = byId.get(el.to);
     const layout = cache.get(el.id, [el, from, to, theme], () => layoutLink(el, from, to, theme));
     if (layout) byId.set(el.id, layout);
   }
-  cache.prune(new Set(all.map((e) => e.id)));
+  // Keep polarity signs apart: links whose sign would overlap another one get it on the other side.
+  const signs = links.flatMap((l) => {
+    const p = byId.get(l.id)?.link?.polarity;
+    return p ? [{ id: l.id, ...p }] : [];
+  });
+  const flips = polarityFlips(signs);
+  const keep = new Set(all.map((e) => e.id));
+  for (const el of links) {
+    if (!flips.has(el.id)) continue;
+    const from = byId.get(el.from);
+    const to = byId.get(el.to);
+    const key = `${el.id}:flipped`;
+    keep.add(key);
+    const layout = cache.get(key, [el, from, to, theme], () =>
+      layoutLink(el, from, to, theme, true),
+    );
+    if (layout) byId.set(el.id, layout);
+  }
+  cache.prune(keep);
   const order = paintOrder(input.elements, input.layers, includeHidden)
     .map((e) => e.id)
     .filter((id) => byId.has(id));

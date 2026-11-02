@@ -1,7 +1,13 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseMdl } from '@cld/mdl';
-import { arcThrough, type ProjectSnapshot } from '@cld/model';
+import {
+  arcThrough,
+  controlFromBend,
+  emptySnapshot,
+  type DiagramElement,
+  type ProjectSnapshot,
+} from '@cld/model';
 import { darkTheme, layoutDiagram, measureText, renderDiagramSvg, wrapText } from '../src/index.js';
 
 const load = (name: string) =>
@@ -107,4 +113,89 @@ describe.each(['coffee-agroforestry.mdl', 'servitization.mdl'])('rendering %s', 
     expect(svg).not.toContain('<script>');
     expect(svg).toContain('&lt;script&gt;');
   });
+});
+
+describe('polarity signs', () => {
+  const signsOf = (snap: ProjectSnapshot) => {
+    const d = snap.diagrams[first(snap)]!;
+    const layout = layoutDiagram(
+      { elements: d.elements, layers: d.layers, variableName: (id) => snap.variables[id]!.name },
+      darkTheme,
+    );
+    return Object.values(d.elements).flatMap((el) => {
+      const p = el.type === 'link' ? layout.byId.get(el.id)?.link?.polarity : undefined;
+      return p ? [{ id: el.id, ...p }] : [];
+    });
+  };
+  const closest = (signs: ReturnType<typeof signsOf>) => {
+    let min = Infinity;
+    for (const a of signs)
+      for (const b of signs)
+        if (a !== b && (a.auto || b.auto))
+          min = Math.min(min, Math.hypot(a.at.x - b.at.x, a.at.y - b.at.y));
+    return min;
+  };
+
+  /** Two loops meeting at one variable, like "Word of Mouth": both arcs arrive from above. */
+  function figureEight(pinned?: 'outside') {
+    const snap = emptySnapshot();
+    const d = snap.diagrams[first(snap)]!;
+    const layerId = Object.keys(d.layers)[0]!;
+    const pos = { s: { x: 160, y: 300 }, b: { x: 440, y: 300 }, l: { x: 720, y: 300 } };
+    const names = { s: 'Sales', b: 'Customer Base', l: 'Loss' };
+    const add = (el: DiagramElement) => (d.elements[el.id] = el);
+    for (const k of ['s', 'b', 'l'] as const) {
+      snap.variables[`v${k}`] = { id: `v${k}`, name: names[k] };
+      add({
+        id: k,
+        type: 'variable',
+        layerId,
+        z: 'a0',
+        variableId: `v${k}`,
+        ...pos[k],
+        w: 110,
+        h: 30,
+        form: 'none',
+      });
+    }
+    const link = (f: keyof typeof pos, t: keyof typeof pos, polarity: '+' | '-', s: number) =>
+      add({
+        id: `${f}${t}`,
+        type: 'link',
+        layerId,
+        z: 'a1',
+        from: f,
+        to: t,
+        polarity,
+        control: controlFromBend(pos[f], pos[t], { t: 0.5, s }),
+        ...(pinned ? { style: { polaritySide: pinned } } : {}),
+      });
+    link('s', 'b', '+', -0.4);
+    link('b', 's', '+', -0.4);
+    link('l', 'b', '-', 0.4);
+    link('b', 'l', '+', 0.4);
+    return snap;
+  }
+
+  it('keeps signs of links arriving at the same variable apart', () => {
+    const signs = signsOf(figureEight());
+    expect(signs).toHaveLength(4);
+    expect(closest(signs)).toBeGreaterThanOrEqual(18);
+  });
+
+  it('leaves signs alone whose side was chosen explicitly', () => {
+    const signs = signsOf(figureEight('outside'));
+    expect(signs.every((s) => !s.auto)).toBe(true);
+    const a = signs.find((x) => x.id === 'sb')!;
+    const c = signs.find((x) => x.id === 'lb')!;
+    // Both pinned outside: they still meet above "Customer Base" (that's what the user chose).
+    expect(Math.hypot(a.at.x - c.at.x, a.at.y - c.at.y)).toBeLessThan(18);
+  });
+
+  it.each(['coffee-agroforestry.mdl', 'servitization.mdl'])(
+    'has no overlapping signs in %s',
+    (name) => {
+      expect(closest(signsOf(load(name)))).toBeGreaterThanOrEqual(18);
+    },
+  );
 });
