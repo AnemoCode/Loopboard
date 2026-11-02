@@ -21,6 +21,7 @@ export const styleSchema = z
     color,
     width: z.number().min(0).max(12),
     head: z.enum(['arrow', 'open', 'none']),
+    polaritySide: z.enum(['outside', 'inside']),
   })
   .partial();
 

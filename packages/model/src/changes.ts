@@ -73,6 +73,7 @@ const STYLE_WORDS: Record<keyof Style, string> = {
   color: 'color',
   width: 'line width',
   head: 'arrowhead',
+  polaritySide: 'polarity side',
 };
 const FORM_WORDS: Record<string, string> = {
   none: 'plain text',

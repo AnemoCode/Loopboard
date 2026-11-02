@@ -34,6 +34,8 @@ export interface LinkStyle {
   width?: number;
   dash?: Dash;
   head?: 'arrow' | 'open' | 'none';
+  /** Which side of the line the polarity sign sits on: outside the curve (default) or inside it. */
+  polaritySide?: 'outside' | 'inside';
 }
 
 export type Style = NodeStyle & LinkStyle;
