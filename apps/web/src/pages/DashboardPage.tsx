@@ -250,7 +250,15 @@ export function DashboardPage() {
         </div>
       )}
 
-      <NewProjectDialog open={creating} onOpenChange={setCreating} />
+      <NewProjectDialog
+        open={creating}
+        onOpenChange={setCreating}
+        importing={importing}
+        onImport={(files) => {
+          setCreating(false);
+          void importFiles(files);
+        }}
+      />
       {renaming && (
         <RenameDialog project={renaming} onClose={() => setRenaming(null)} onDone={refresh} />
       )}
@@ -367,10 +375,16 @@ function ProjectCard({
 function NewProjectDialog({
   open,
   onOpenChange,
+  importing,
+  onImport,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  importing: boolean;
+  onImport: (files: File[]) => void;
 }) {
+  const importInput = useRef<HTMLInputElement>(null);
+  const [dropping, setDropping] = useState(false);
   const [name, setName] = useState('');
   const [template, setTemplate] = useState('blank');
   const [busy, setBusy] = useState(false);
@@ -413,6 +427,52 @@ function NewProjectDialog({
         }}
         className="space-y-5"
       >
+        <button
+          type="button"
+          onClick={() => importInput.current?.click()}
+          onDragOver={(e) => {
+            if (!e.dataTransfer.types.includes('Files')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            setDropping(true);
+          }}
+          onDragLeave={() => setDropping(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDropping(false);
+            if (e.dataTransfer.files.length) onImport([...e.dataTransfer.files]);
+          }}
+          disabled={importing}
+          className={cx(
+            'flex w-full items-center gap-3 rounded-xl border border-dashed p-3 text-left transition-colors',
+            dropping
+              ? 'border-accent-500 bg-accent-50 dark:bg-accent-500/10'
+              : 'border-app hover:bg-surface-2',
+          )}
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600 dark:bg-accent-500/10 dark:text-accent-300">
+            {importing ? <Spinner /> : <FileUp className="size-4" />}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-app">Import from Vensim</span>
+            <span className="block text-xs text-muted">
+              Choose a .mdl file (or drop it here). Shapes, colors, fonts and loops come along.
+            </span>
+          </span>
+        </button>
+        <input
+          ref={importInput}
+          type="file"
+          accept={ACCEPTED_FILES}
+          multiple
+          hidden
+          aria-label="Vensim file to import"
+          onChange={(e) => {
+            if (e.target.files?.length) onImport([...e.target.files]);
+            e.target.value = '';
+          }}
+        />
         <Field label="Name">
           <Input
             autoFocus
