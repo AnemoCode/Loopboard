@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import { LogoMark } from '../components/Logo';
+import { RepoFooter } from '../components/RepoFooter';
 import { Button, Field, Input } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { authClient } from '../lib/auth';
@@ -70,8 +71,8 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   const otherHref = params.get('next') ? `${other}?next=${encodeURIComponent(next)}` : other;
 
   return (
-    <div className="flex min-h-full items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
+    <div className="flex min-h-full flex-col items-center px-4">
+      <div className="flex w-full max-w-sm flex-1 flex-col justify-center py-12">
         <div className="mb-8 flex flex-col items-center text-center">
           <LogoMark size={44} />
           <h1 className="mt-4 text-2xl font-semibold tracking-tight text-app">
@@ -186,6 +187,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
           </Link>
         </p>
       </div>
+      <RepoFooter />
     </div>
   );
 }

@@ -18,6 +18,7 @@ import { emptySnapshot } from '@cld/model';
 import { darkTheme, lightTheme, renderDiagramSvg } from '@cld/render';
 import { GUEST_PROJECT_LIMIT, ROLE_LABELS, type ProjectSummary } from '@cld/shared';
 import { Logo } from '../components/Logo';
+import { RepoFooter } from '../components/RepoFooter';
 import { UserMenu } from '../components/UserMenu';
 import {
   Button,
@@ -106,7 +107,7 @@ export function DashboardPage() {
 
   return (
     <div
-      className="min-h-full"
+      className="flex min-h-full flex-col"
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault();
@@ -123,7 +124,7 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-app">Projects</h1>
@@ -241,6 +242,7 @@ export function DashboardPage() {
           </div>
         )}
       </main>
+      <RepoFooter />
 
       {dragOver && (
         <div className="pointer-events-none fixed inset-4 z-30 flex items-center justify-center rounded-3xl border-2 border-dashed border-accent-500 bg-accent-50/80 dark:bg-accent-500/10">
