@@ -42,6 +42,9 @@ export function primToSvg(p: Prim, fontMode: FontMode = 'web'): string {
         ` font-family="${escapeXml(family)}" font-size="${p.font.size}"` +
         (p.font.bold ? ' font-weight="bold"' : '') +
         (p.font.italic ? ' font-style="italic"' : '') +
+        (p.font.underline || p.font.strike
+          ? ` text-decoration="${[p.font.underline && 'underline', p.font.strike && 'line-through'].filter(Boolean).join(' ')}"`
+          : '') +
         ` fill="${escapeXml(p.fill)}" text-anchor="${p.anchor}"`;
       const spans = p.lines
         .map((l) => `<tspan x="${p.x}" y="${l.y}">${escapeXml(l.text)}</tspan>`)

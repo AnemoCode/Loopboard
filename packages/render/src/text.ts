@@ -6,6 +6,8 @@ export interface Font {
   size: number;
   bold: boolean;
   italic: boolean;
+  underline?: boolean;
+  strike?: boolean;
 }
 
 export const LINE_HEIGHT = 1.25;

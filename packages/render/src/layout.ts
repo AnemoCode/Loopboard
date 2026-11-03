@@ -49,7 +49,10 @@ export interface Box {
 
 export type Boundary =
   | { kind: 'rect'; cx: number; cy: number; hw: number; hh: number }
-  | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number };
+  | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number }
+  | { kind: 'diamond'; cx: number; cy: number; hw: number; hh: number }
+  /** Pointed left and right, flat top and bottom. */
+  | { kind: 'hexagon'; cx: number; cy: number; hw: number; hh: number };
 
 export interface ElementLayout {
   id: string;
@@ -87,6 +90,8 @@ export function fontOf(style: Style | undefined, size = DEFAULT_FONT_SIZE): Font
     size: style?.fontSize ?? size,
     bold: style?.bold ?? false,
     italic: style?.italic ?? false,
+    ...(style?.underline ? { underline: true } : {}),
+    ...(style?.strike ? { strike: true } : {}),
   };
 }
 
@@ -132,6 +137,14 @@ const pointBox = (pts: Point[], pad = 0): Box =>
 export function insideBoundary(b: Boundary, p: Point, gap = 0): boolean {
   if (b.kind === 'rect')
     return Math.abs(p.x - b.cx) <= b.hw + gap && Math.abs(p.y - b.cy) <= b.hh + gap;
+  if (b.kind === 'diamond')
+    return Math.abs(p.x - b.cx) / (b.hw + gap) + Math.abs(p.y - b.cy) / (b.hh + gap) <= 1;
+  if (b.kind === 'hexagon') {
+    const hw = b.hw + gap;
+    const hh = b.hh + gap;
+    const dy = Math.abs(p.y - b.cy);
+    return dy <= hh && Math.abs(p.x - b.cx) <= hw - (hw / 2) * (dy / hh);
+  }
   const rx = b.rx + gap;
   const ry = b.ry + gap;
   const dx = (p.x - b.cx) / rx;
@@ -140,6 +153,11 @@ export function insideBoundary(b: Boundary, p: Point, gap = 0): boolean {
 }
 
 const boundaryCenter = (b: Boundary): Point => ({ x: b.cx, y: b.cy });
+
+/** Hexagon outline: pointed left and right, flat top and bottom. */
+const hexagonPath = (x: number, y: number, hw: number, hh: number) =>
+  `M${r1(x - hw)} ${r1(y)}L${r1(x - hw / 2)} ${r1(y - hh)}L${r1(x + hw / 2)} ${r1(y - hh)}` +
+  `L${r1(x + hw)} ${r1(y)}L${r1(x + hw / 2)} ${r1(y + hh)}L${r1(x - hw / 2)} ${r1(y + hh)}Z`;
 
 // ------------------------------------------------------------------ nodes
 
@@ -171,12 +189,29 @@ function layoutVariable(el: VariableNode, name: string, theme: Theme): ElementLa
       : (el.style?.stroke ?? (hasForm ? theme.nodeStroke : undefined));
   const fill = fillOf(el.style?.fill, undefined);
   const paint: Paint = { stroke, fill, width: el.style?.strokeWidth ?? 1.25, dash: el.style?.dash };
+  if (el.form === 'hexagon') {
+    // A text box of half size (a, b) fits when b ≤ hh and a ≤ hw − hw/2 · b/hh.
+    hh = Math.max(el.h / 2, (th / 2 + FORM_PAD_Y / 2) * 1.25);
+    hw = Math.max(el.w / 2, (tw / 2 + FORM_PAD_X / 2) / (1 - (th / 2 + FORM_PAD_Y / 2) / (2 * hh)));
+  }
+  if (el.form === 'ellipse' || el.form === 'diamond') {
+    // The text box must fit inside: an ellipse needs √2 times its half extents, a diamond twice.
+    const k = el.form === 'ellipse' ? Math.SQRT2 : 2;
+    hw = Math.max(el.w / 2, (tw / 2 + FORM_PAD_X / 2) * k);
+    hh = Math.max(el.h / 2, (th / 2 + FORM_PAD_Y / 2) * k);
+  }
   const box = { x: el.x - hw, y: el.y - hh, w: hw * 2, h: hh * 2 };
   if (el.form === 'ellipse') {
-    // An ellipse needs more room than its text's bounding box.
-    hw *= 1.12;
-    hh *= 1.2;
     prims.push({ t: 'ellipse', cx: el.x, cy: el.y, rx: r1(hw), ry: r1(hh), ...paint });
+  } else if (el.form === 'diamond') {
+    const [x, y, w, h] = [el.x, el.y, r1(hw), r1(hh)];
+    prims.push({
+      t: 'path',
+      d: `M${r1(x)} ${r1(y - h)}L${r1(x + w)} ${r1(y)}L${r1(x)} ${r1(y + h)}L${r1(x - w)} ${r1(y)}Z`,
+      ...paint,
+    });
+  } else if (el.form === 'hexagon') {
+    prims.push({ t: 'path', d: hexagonPath(el.x, el.y, hw, hh), ...paint });
   } else if (hasForm || stroke || fill) {
     prims.push({
       t: 'rect',
@@ -195,8 +230,10 @@ function layoutVariable(el: VariableNode, name: string, theme: Theme): ElementLa
   const boundary: Boundary =
     el.form === 'ellipse'
       ? { kind: 'ellipse', cx: el.x, cy: el.y, rx: hw, ry: hh }
-      : { kind: 'rect', cx: el.x, cy: el.y, hw, hh };
-  const bbox = el.form === 'ellipse' ? { x: el.x - hw, y: el.y - hh, w: hw * 2, h: hh * 2 } : box;
+      : el.form === 'diamond' || el.form === 'hexagon'
+        ? { kind: el.form, cx: el.x, cy: el.y, hw, hh }
+        : { kind: 'rect', cx: el.x, cy: el.y, hw, hh };
+  const bbox = box;
   return {
     id: el.id,
     type: 'variable',
@@ -224,6 +261,8 @@ function layoutShape(el: ShapeElement, theme: Theme): ElementLayout {
   const prims: Prim[] = [];
   if (el.shape === 'ellipse')
     prims.push({ t: 'ellipse', cx: el.x, cy: el.y, rx: hw, ry: hh, ...paint });
+  else if (el.shape === 'hexagon')
+    prims.push({ t: 'path', d: hexagonPath(el.x, el.y, hw, hh), ...paint });
   else if (el.shape === 'diamond')
     prims.push({
       t: 'path',
@@ -242,7 +281,10 @@ function layoutShape(el: ShapeElement, theme: Theme): ElementLayout {
     });
   const font = fontOf(el.style, 13);
   const value = el.text ?? '';
-  const inner = Math.max(10, el.w - 20);
+  // Wrap text to what fits inside the outline.
+  const fit =
+    el.shape === 'diamond' ? 0.5 : el.shape === 'ellipse' ? 0.7 : el.shape === 'hexagon' ? 0.6 : 1;
+  const inner = Math.max(10, el.w * fit - 20 * fit);
   const lines = value ? wrapText(value, font, inner) : [];
   if (lines.length)
     prims.push(textBlock(lines, font, el.x, el.y, 'middle', el.style?.textColor ?? theme.text));
@@ -445,8 +487,8 @@ function selfLoop(b: Boundary): {
   mid: Point;
   apex: Point;
 } {
-  const hw = b.kind === 'rect' ? b.hw : b.rx;
-  const hh = b.kind === 'rect' ? b.hh : b.ry;
+  const hw = b.kind === 'ellipse' ? b.rx : b.hw;
+  const hh = b.kind === 'ellipse' ? b.ry : b.hh;
   const sx = b.cx + hw * 0.35;
   const top = b.cy - hh - GAP;
   const ex = b.cx + hw + GAP;
