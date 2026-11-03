@@ -57,13 +57,16 @@ test.describe('import, export and versions', () => {
     await page.locator('input[type="file"]').setInputFiles(fixture('coffee-agroforestry.mdl'));
     await expect(page.locator('[data-type="variable"]')).toHaveCount(22);
     await addVariable(page, 'New idea', 300, 120);
-    await page.getByRole('radio', { name: 'Box' }).click();
+    // Boxes, circles and diamonds export to Vensim; rounded corners don't exist there.
+    await page.getByRole('radio', { name: 'Round' }).click();
     await page.keyboard.press('ControlOrMeta+e');
     await page
       .getByRole('dialog')
       .getByRole('button', { name: /^Vensim$/ })
       .click();
-    await expect(page.getByText('Variable box shapes are not exported to Vensim')).toBeVisible();
+    await expect(
+      page.getByText('Rounded boxes are exported to Vensim as plain boxes.'),
+    ).toBeVisible();
   });
 
   test('saves and restores versions', async ({ page }) => {

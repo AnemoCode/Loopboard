@@ -7,7 +7,8 @@ import {
   type Variable,
 } from '@cld/model';
 import { causesKey, parseEquation, polarityFromCode } from './parse.js';
-import { fontFieldColor, hexToRgb, quoteName, rgbToHex, splitFields, unquote } from './util.js';
+import { writeLinkAppearance, writeVariableAppearance } from './appearance.js';
+import { quoteName, splitFields, unquote } from './util.js';
 
 export interface MdlWriteResult {
   text: string;
@@ -329,34 +330,7 @@ function elementLines(
       setNum(f, 4, el.y);
       setNum(f, 5, el.w / 2);
       setNum(f, 6, el.h / 2);
-      const color = el.style?.textColor ?? null;
-      if (color !== fontFieldColor(f)) {
-        if (color) {
-          f.splice(
-            15,
-            f.length - 15,
-            '0-0-0',
-            '0-0-0',
-            `|||${hexToRgb(color)}`,
-            '0',
-            '0',
-            '0',
-            '0',
-            '0',
-            '0',
-          );
-          f[9] = '2';
-        } else {
-          f.splice(15, f.length - 15, '0', '0', '0', '0', '0', '0');
-          f[9] = '0';
-        }
-      }
-      if (el.form !== 'none')
-        warnings.add(
-          'Variable box shapes are not exported to Vensim (variables are written as plain text).',
-        );
-      if (el.style && Object.keys(el.style).some((k) => k !== 'textColor'))
-        warnings.add('Fonts, fills and borders are not exported to Vensim; only text colors are.');
+      writeVariableAppearance(f, el.form, el.style, warnings);
       return `${f.join(',')}\n`;
     }
     case 'link': {
@@ -367,8 +341,7 @@ function elementLines(
       f[3] = String(ids.get(el.to));
       if (polarityFromCode(f[6]) !== el.polarity)
         f[6] = el.polarity ? POLARITY_CODES[el.polarity]! : '0';
-      const color = el.style?.color ?? null;
-      if (color !== rgbToHex(f[11])) f[11] = hexToRgb(color);
+      writeLinkAppearance(f, el);
       let points = el.mdl?.text ?? '';
       const orig = el.mdl?.fields ? origControl(el.mdl.fields, points) : undefined;
       const same =
@@ -386,7 +359,9 @@ function elementLines(
       if (el.delay) warnings.add('Delay marks are not exported to Vensim.');
       if (el.label) warnings.add('Link labels are not exported to Vensim.');
       if (el.style?.dash || el.style?.width || el.style?.head)
-        warnings.add('Arrow line styles are not exported to Vensim; only colors are.');
+        warnings.add(
+          'Arrow line styles are not exported to Vensim; colors and polarity placement are.',
+        );
       return `${f.join(',')}|${points}\n`;
     }
     case 'loop': {
@@ -421,7 +396,7 @@ function elementLines(
       setNum(f, 5, el.w / 2);
       setNum(f, 6, el.h / 2);
       const value = (el.text ?? '').replace(/\r?\n/g, ' ');
-      if (el.type === 'shape') warnings.add('Shapes are exported to Vensim as comments.');
+      writeVariableAppearance(f, el.type === 'shape' ? el.shape : 'none', el.style, warnings);
       if (el.text?.includes('\n')) warnings.add('Line breaks in text are exported as spaces.');
       const text = el.mdl?.text !== undefined && el.mdl.text === value ? el.mdl.text : value;
       if (text) f[8] = String(Number(f[8]) | 4);

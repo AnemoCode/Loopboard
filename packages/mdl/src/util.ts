@@ -73,10 +73,3 @@ export function hexToRgb(hex: string | null | undefined): string {
   if (!m) return '-1--1--1';
   return [m[1], m[2], m[3]].map((v) => parseInt(v!, 16)).join('-');
 }
-
-/** Text color stored in a sketch font field `name|size|style|r-g-b`. */
-export function fontFieldColor(fields: string[]): string | null {
-  const font = fields.find((f, i) => i > 8 && f.startsWith('|'));
-  if (!font) return null;
-  return rgbToHex(font.split('|')[3]);
-}

@@ -9,14 +9,8 @@ import {
   type ProjectSnapshot,
   type Variable,
 } from '@cld/model';
-import {
-  fontFieldColor,
-  rgbToHex,
-  splitFields,
-  splitOutsideQuotes,
-  unquote,
-  vensimKey,
-} from './util.js';
+import { readLinkColor, readLinkPolaritySide, readVariableAppearance } from './appearance.js';
+import { splitFields, splitOutsideQuotes, unquote, vensimKey } from './util.js';
 
 export interface MdlParseResult {
   snapshot: ProjectSnapshot;
@@ -229,8 +223,10 @@ export function parseMdl(input: string): MdlParseResult {
           polarity: polarityFromCode(f[6]),
           mdl: { sketchId, fields: f, text: points },
         };
-        const color = rgbToHex(f[11]);
-        if (color) el.style = { color };
+        const color = readLinkColor(f);
+        const polaritySide = readLinkPolaritySide(f);
+        if (color || polaritySide)
+          el.style = { ...(color ? { color } : {}), ...(polaritySide ? { polaritySide } : {}) };
         if (pts.length > 1)
           warnings.push(
             `Link ${sketchId} has ${pts.length} points; only the first is used for its curve.`,
@@ -253,7 +249,11 @@ export function parseMdl(input: string): MdlParseResult {
         }
         const isShadow = nodeSeen.has(variableId);
         nodeSeen.add(variableId);
-        const textColor = fontFieldColor(f);
+        const look = readVariableAppearance(f);
+        if (look.unknownShape !== undefined)
+          warnings.push(
+            `"${name}" uses a Vensim shape (${look.unknownShape}) that isn't supported yet; it is shown without an outline and kept for export.`,
+          );
         const el: DiagramElement = {
           id: newId(),
           type: 'variable',
@@ -264,9 +264,9 @@ export function parseMdl(input: string): MdlParseResult {
           y: Number(f[4]),
           w: Number(f[5]) * 2,
           h: Number(f[6]) * 2,
-          form: 'none',
+          form: look.form,
           ...(isShadow ? { isShadow: true } : {}),
-          ...(textColor ? { style: { textColor } } : {}),
+          ...(look.style ? { style: look.style } : {}),
           mdl: { sketchId, fields: f, rawName },
         };
         view.ids.set(sketchId, el.id);
@@ -286,7 +286,8 @@ export function parseMdl(input: string): MdlParseResult {
           mdl: { sketchId, fields: f, ...(text !== undefined ? { text } : {}) },
         };
         let el: DiagramElement;
-        if (shape === '4' || shape === '5') {
+        const code = Number(shape) & 31;
+        if (code === 4 || code === 5) {
           const label = (text ?? '').trim();
           el = {
             ...base,
@@ -296,18 +297,38 @@ export function parseMdl(input: string): MdlParseResult {
             r: Number(f[5]),
             kind: /^r/i.test(label) ? 'R' : /^b/i.test(label) ? 'B' : 'custom',
             label,
-            direction: shape === '4' ? 'cw' : 'ccw',
+            direction: code === 4 ? 'cw' : 'ccw',
           };
         } else {
-          el = {
+          // Comments: boxed / round / diamond / hexagon ones become shapes, the rest text.
+          const look = readVariableAppearance(f);
+          if (look.unknownShape !== undefined)
+            warnings.push(
+              `A comment uses a Vensim shape (${look.unknownShape}) that isn't supported yet; it is shown without an outline and kept for export.`,
+            );
+          const box = {
             ...base,
-            type: 'text',
             x: Number(f[3]),
             y: Number(f[4]),
             w: Number(f[5]) * 2,
             h: Number(f[6]) * 2,
-            text: text ?? '',
           };
+          el =
+            look.form === 'none'
+              ? {
+                  ...box,
+                  type: 'text',
+                  text: text ?? '',
+                  ...(look.style ? { style: look.style } : {}),
+                }
+              : {
+                  ...box,
+                  type: 'shape',
+                  shape: look.form,
+                  ...(text ? { text } : {}),
+                  // Vensim leaves comment shapes unfilled unless a fill color is set.
+                  style: { fill: null, ...look.style },
+                };
         }
         view.ids.set(sketchId, el.id);
         view.elements.push(el);

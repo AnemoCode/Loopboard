@@ -1,0 +1,221 @@
+{UTF-8}
+"Financial support from supply-chain partners (7)"  = A FUNCTION OF( Brand reputation\
+		,Partner trust)
+	~	
+	~		|
+
+Partner trust  = A FUNCTION OF( "Agroforestry digital traceability (6)")
+	~	
+	~		|
+
+Revenue for farmers  = A FUNCTION OF( Coffee ouput,"End-of-life equipment sold back to suppliers (8)"\
+		,"Long-term coffee production efficiency (4)")
+	~	
+	~		|
+
+"End-of-life equipment sold back to suppliers (8)"  = A FUNCTION OF( )
+	~	
+	~		|
+
+"Financial secuirity for farmers (2)"  = A FUNCTION OF( Customer demand for coffee,Revenue for farmers\
+		,"Supply-chain stability")
+	~	
+	~		|
+
+Adoption of agroforestry practices  = A FUNCTION OF( "Transition/initial costs")
+	~	
+	~		|
+
+Investment in digitalization  = A FUNCTION OF( Revenue for Grow Grounds)
+	~	
+	~		|
+
+Brand reputation  = A FUNCTION OF( "Long-term net GHG impact")
+	~	
+	~		|
+
+"Long-term net GHG impact"  = A FUNCTION OF( Adoption of agroforestry practices,Coffee ouput\
+		)
+	~	
+	~		|
+
+Carbon revenue  = A FUNCTION OF( "Long-term net GHG impact")
+	~	
+	~		|
+
+Coffee ouput  = A FUNCTION OF( Customer demand for coffee)
+	~	
+	~		|
+
+Revenue for Grow Grounds  = A FUNCTION OF( Carbon revenue)
+	~	
+	~		|
+
+Customer demand for coffee  = A FUNCTION OF( Brand reputation,Customer trust)
+	~	
+	~		|
+
+"Supply-chain stability"  = A FUNCTION OF( "Financial support from supply-chain partners (7)"\
+		)
+	~	
+	~		|
+
+Access to efficient equipment  = A FUNCTION OF( "Investment in sharing equipment between farmers (5)"\
+		)
+	~	
+	~		|
+
+"Long-term coffee production efficiency (4)"  = A FUNCTION OF( Access to efficient equipment\
+		,Investment into agroforestry)
+	~	
+	~		|
+
+"Transition/initial costs"  = A FUNCTION OF( "Investment in sharing equipment between farmers (5)"\
+		)
+	~	
+	~		|
+
+"Investment in sharing equipment between farmers (5)"  = A FUNCTION OF( "Financial secuirity for farmers (2)"\
+		)
+	~	
+	~		|
+
+Equipment costs per farmer  = A FUNCTION OF( "Investment in sharing equipment between farmers (5)"\
+		)
+	~	
+	~		|
+
+Customer trust  = A FUNCTION OF( "Agroforestry digital traceability (6)")
+	~	
+	~		|
+
+"Agroforestry digital traceability (6)"  = A FUNCTION OF( Investment in digitalization\
+		)
+	~	
+	~		|
+
+Investment into agroforestry  = A FUNCTION OF( "Financial secuirity for farmers (2)")
+	~	
+	~		|
+
+********************************************************
+	.Control
+********************************************************~
+		Simulation Control Parameters
+	|
+
+FINAL TIME  = 100
+	~	Month
+	~	The final time for the simulation.
+	|
+
+INITIAL TIME  = 0
+	~	Month
+	~	The initial time for the simulation.
+	|
+
+SAVEPER  = 
+        TIME STEP
+	~	Month [0,?]
+	~	The frequency with which output is stored.
+	|
+
+TIME STEP  = 1
+	~	Month [0,?]
+	~	The time step for the simulation.
+	|
+
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*View 1
+$-1--1--1,0,|12||-1--1--1|-1--1--1|-1--1--1|-1--1--1|-1--1--1|96,96,157,2
+12,1,0,32,119,30,30,4,7,0,4,-1,0,0,0,0-0-0,255-255-255,|||0-0-0,0,0,0,0,0,0
+R
+10,2,"Investment in sharing equipment between farmers (5)",-326,149,74,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,3,"Long-term net GHG impact",424,410,54,26,8,3,0,16,-1,0,0,0,0-0-0,0-0-0,||U|0-0-0,0,0,0,0,0,0
+10,4,Revenue for farmers,181,127,47,26,8,3,0,34,-1,0,0,0,0-0-0,0-0-0,Skia|||0-0-0,0,0,0,0,0,0
+10,5,Customer trust,365,134,74,74,11,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,6,Customer demand for coffee,298,252,65,19,8,3,0,18,-1,0,0,0,0-0-0,0-0-0,||B|255-0-127,0,0,0,0,0,0
+10,7,Investment in digitalization,717,208,54,26,3,3,0,5,-1,0,0,0,255-119-255,255-119-255,|||0-0-0,0,0,0,0,0,0
+10,8,Brand reputation,471,286,46,19,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,9,Equipment costs per farmer,-487,207,62,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,10,"Financial secuirity for farmers (2)",21,261,65,24,8,3,0,0,-1,1,0,0,0,0,0,0,0,0
+10,11,"Long-term coffee production efficiency (4)",5,-27,77,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,12,Investment into agroforestry,-121,118,49,27,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,13,"Agroforestry digital traceability (6)",546,103,71,71,2,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,14,7,13,1,0,43,0,0,192,0,-1--1--1,,1|(662,132)|
+1,15,13,5,1,0,43,0,0,192,0,-1--1--1,,1|(443,93)|
+1,16,5,6,1,0,43,0,0,192,0,-1--1--1,,1|(315,185)|
+1,17,10,12,1,0,43,0,0,192,0,-1--1--1,,1|(-93,212)|
+10,18,"Transition/initial costs",-394,462,62,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,19,"Financial support from supply-chain partners (7)",287,619,68,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,20,12,11,1,0,43,0,0,192,0,-1--1--1,,1|(-90,36)|
+1,21,11,4,1,0,43,0,0,192,0,-1--1--1,,1|(106,3)|
+1,22,4,10,1,0,43,0,0,192,0,-1--1--1,,1|(141,223)|
+10,23,Access to efficient equipment,-249,-57,67,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,24,10,2,1,0,43,0,0,192,0,-1--1--1,,1|(-157,274)|
+1,25,2,23,1,0,43,0,0,192,0,-1--1--1,,1|(-330,54)|
+1,26,23,11,1,0,43,0,0,192,0,-1--1--1,,1|(-146,-80)|
+1,27,2,18,1,0,45,0,0,192,0,-1--1--1,,1|(-415,268)|
+1,28,2,9,1,0,45,0,0,192,0,-1--1--1,,1|(-443,139)|
+1,29,6,10,1,0,43,0,0,192,0,-1--1--1,,1|(132,287)|
+10,30,Coffee ouput,269,329,50,16,8,3,0,16,-1,0,0,0,0-0-0,0-0-0,||I|0-0-0,0,0,0,0,0,0
+1,31,8,6,1,0,43,0,0,192,0,-1--1--1,,1|(399,232)|
+1,32,6,30,0,0,43,0,0,192,0,-1--1--1,,1|(0,0)|
+1,33,30,3,1,0,43,0,0,192,0,-1--1--1,,1|(319,408)|
+1,34,3,8,1,0,45,0,0,192,0,-1--1--1,,1|(463,371)|
+10,35,Carbon revenue,607,446,36,56,8,3,0,16,-1,0,0,0,0-0-0,0-0-0,||S|0-0-0,0,0,0,0,0,0
+10,36,Revenue for Grow Grounds,723,346,66,26,3,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,37,3,35,1,0,45,0,0,192,0,-1--1--1,,1|(487,451)|
+1,38,35,36,1,0,43,0,0,192,0,-1--1--1,,1|(695,405)|
+1,39,36,7,1,0,43,0,0,192,0,-1--1--1,,1|(734,297)|
+10,40,"Supply-chain stability",9,466,50,26,8,3,0,0,-1,1,0,0,0,0,0,0,0,0
+1,41,19,40,1,0,43,0,0,64,0,-1--1--1,,1|(82,577)|
+1,42,40,10,1,0,43,0,0,192,0,-1--1--1,,1|(3,403)|
+10,43,Adoption of agroforestry practices,-76,595,47,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,44,18,43,1,0,45,0,0,192,0,-1--1--1,,1|(-282,573)|
+1,45,43,3,1,0,45,0,0,192,0,-1--1--1,,1|(224,564)|
+1,46,8,19,1,0,43,0,0,0,0,-1--1--1,,1|(501,417)|
+1,47,30,4,1,0,43,0,0,192,0,-1--1--1,,1|(213,240)|
+12,48,0,385,330,30,30,4,7,0,4,-1,0,0,0,0-0-0,255-255-255,|||0-0-0,0,0,0,0,0,0
+B
+10,49,Partner trust,783,540,49,26,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,50,13,49,1,0,43,0,0,192,0,-1--1--1,,1|(859,191)|
+1,51,49,19,1,0,43,0,0,192,0,-1--1--1,,1|(555,619)|
+12,52,0,-200,80,30,30,4,7,0,4,-1,0,0,0,0-0-0,255-255-255,|||0-0-0,0,0,0,0,0,0
+R
+12,53,0,545,269,30,30,4,7,0,4,-1,0,0,0,0-0-0,255-255-255,|||0-0-0,0,0,0,0,0,0
+B
+10,54,"End-of-life equipment sold back to suppliers (8)",282,-9,77,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,55,54,4,1,0,0,0,0,192,0,-1--1--1,,1|(247,70)|
+///---\\\
+:L<%^E!@
+5:Revenue for farmers
+19:157,0
+24:0
+25:0
+26:0
+23:0
+15:0,0,0,0,0,0
+27:0,
+34:0,
+42:0
+72:0
+73:0
+95:0
+96:0
+97:0
+77:0
+78:0
+102:1
+93:0
+94:0
+92:0
+91:0
+90:0
+87:0
+75:
+43:
+103:8,8,8,3,8
+105:0,0,0,0,0,0,0,0,0,0
+104:Vensim Sans|12||0-0-0|0-0-0|-1--1--1|0-0-255|192-192-192|-1--1--1
