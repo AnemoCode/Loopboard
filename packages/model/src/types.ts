@@ -26,6 +26,9 @@ export interface NodeStyle {
   fontSize?: number;
   bold?: boolean;
   italic?: boolean;
+  underline?: boolean;
+  /** Strike-through. */
+  strike?: boolean;
   align?: 'left' | 'center' | 'right';
 }
 
@@ -59,7 +62,7 @@ interface ElementBase {
   mdl?: MdlElementInfo;
 }
 
-export type NodeForm = 'none' | 'rect' | 'rounded' | 'ellipse';
+export type NodeForm = 'none' | 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'hexagon';
 
 export interface VariableNode extends ElementBase {
   type: 'variable';
@@ -104,7 +107,7 @@ export interface LoopMarker extends ElementBase {
   loopKey?: string;
 }
 
-export type ShapeKind = 'rect' | 'rounded' | 'ellipse' | 'diamond';
+export type ShapeKind = 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'hexagon';
 
 export interface ShapeElement extends ElementBase {
   type: 'shape';

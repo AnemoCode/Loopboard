@@ -17,6 +17,8 @@ export const styleSchema = z
     fontSize: z.number().min(6).max(96),
     bold: z.boolean(),
     italic: z.boolean(),
+    underline: z.boolean(),
+    strike: z.boolean(),
     align: z.enum(['left', 'center', 'right']),
     color,
     width: z.number().min(0).max(12),
@@ -54,7 +56,7 @@ export const elementSchema = z.discriminatedUnion('type', [
     y: num,
     w: num,
     h: num,
-    form: z.enum(['none', 'rect', 'rounded', 'ellipse']),
+    form: z.enum(['none', 'rect', 'rounded', 'ellipse', 'diamond', 'hexagon']),
     isShadow: z.boolean().optional(),
   }),
   z.object({
@@ -82,7 +84,7 @@ export const elementSchema = z.discriminatedUnion('type', [
   z.object({
     ...base,
     type: z.literal('shape'),
-    shape: z.enum(['rect', 'rounded', 'ellipse', 'diamond']),
+    shape: z.enum(['rect', 'rounded', 'ellipse', 'diamond', 'hexagon']),
     x: num,
     y: num,
     w: num,

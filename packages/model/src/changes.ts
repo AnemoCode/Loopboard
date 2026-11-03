@@ -69,6 +69,8 @@ const STYLE_WORDS: Record<keyof Style, string> = {
   fontSize: 'font size',
   bold: 'bold',
   italic: 'italic',
+  underline: 'underline',
+  strike: 'strike-through',
   align: 'alignment',
   color: 'color',
   width: 'line width',
@@ -81,6 +83,7 @@ const FORM_WORDS: Record<string, string> = {
   rounded: 'rounded box',
   ellipse: 'oval',
   diamond: 'diamond',
+  hexagon: 'hexagon',
 };
 const json = (v: unknown) => JSON.stringify(v ?? null);
 const list = (words: string[]) =>
