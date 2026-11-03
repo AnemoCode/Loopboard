@@ -84,8 +84,8 @@ export function ShareDialog({ onOpenChange }: { onOpenChange: (o: boolean) => vo
         <div className="rounded-xl border border-accent-200 bg-accent-50 p-4 dark:border-accent-500/30 dark:bg-accent-500/10">
           <h3 className="font-medium text-app">Create a free account to share</h3>
           <p className="mt-1 text-sm text-muted">
-            You're working as a guest. To invite others, this project needs an owner with an account,
-            otherwise everyone would lose it if this browser's data is cleared.
+            You're working as a guest. To invite others, this project needs an owner with an
+            account, otherwise everyone would lose it if this browser's data is cleared.
           </p>
           <Button
             variant="primary"

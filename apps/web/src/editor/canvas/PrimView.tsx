@@ -10,6 +10,13 @@ export function PrimView({ p }: { p: Prim }) {
         fontSize={p.font.size}
         fontWeight={p.font.bold ? 'bold' : undefined}
         fontStyle={p.font.italic ? 'italic' : undefined}
+        textDecoration={
+          p.font.underline || p.font.strike
+            ? [p.font.underline && 'underline', p.font.strike && 'line-through']
+                .filter(Boolean)
+                .join(' ')
+            : undefined
+        }
         fill={p.fill}
         textAnchor={p.anchor}
         xmlSpace="preserve"

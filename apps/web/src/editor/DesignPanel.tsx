@@ -3,8 +3,16 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  Circle,
+  Diamond,
+  Hexagon,
   Italic,
+  RectangleHorizontal,
+  Square,
+  Type,
   Lock,
+  Strikethrough,
+  Underline,
   Unlock,
   Spline,
 } from 'lucide-react';
@@ -169,10 +177,24 @@ export function DesignPanel() {
               value={common(selected.map((e) => (e as VariableNode).form)) ?? null}
               onChange={(form) => patchElements(ctx, ids, { form })}
               options={[
-                { value: 'none', label: 'Text' },
-                { value: 'rect', label: 'Box' },
-                { value: 'rounded', label: 'Round' },
-                { value: 'ellipse', label: 'Oval' },
+                { value: 'none', label: <Type className="mx-auto size-4" />, title: 'Text' },
+                { value: 'rect', label: <Square className="mx-auto size-4" />, title: 'Box' },
+                {
+                  value: 'rounded',
+                  label: <RectangleHorizontal className="mx-auto size-4" />,
+                  title: 'Round',
+                },
+                { value: 'ellipse', label: <Circle className="mx-auto size-4" />, title: 'Oval' },
+                {
+                  value: 'diamond',
+                  label: <Diamond className="mx-auto size-4" />,
+                  title: 'Diamond',
+                },
+                {
+                  value: 'hexagon',
+                  label: <Hexagon className="mx-auto size-4 rotate-90" />,
+                  title: 'Hexagon',
+                },
               ]}
             />
           ) : (
@@ -180,10 +202,23 @@ export function DesignPanel() {
               value={common(selected.map((e) => (e.type === 'shape' ? e.shape : null))) ?? null}
               onChange={(shape) => patchElements(ctx, ids, { shape })}
               options={[
-                { value: 'rect', label: 'Rect' },
-                { value: 'rounded', label: 'Round' },
-                { value: 'ellipse', label: 'Oval' },
-                { value: 'diamond', label: 'Diamond' },
+                { value: 'rect', label: <Square className="mx-auto size-4" />, title: 'Rect' },
+                {
+                  value: 'rounded',
+                  label: <RectangleHorizontal className="mx-auto size-4" />,
+                  title: 'Round',
+                },
+                { value: 'ellipse', label: <Circle className="mx-auto size-4" />, title: 'Oval' },
+                {
+                  value: 'diamond',
+                  label: <Diamond className="mx-auto size-4" />,
+                  title: 'Diamond',
+                },
+                {
+                  value: 'hexagon',
+                  label: <Hexagon className="mx-auto size-4 rotate-90" />,
+                  title: 'Hexagon',
+                },
               ]}
             />
           )}
@@ -237,6 +272,20 @@ export function DesignPanel() {
               onClick={() => setStyle({ italic: style('italic') ? undefined : true })}
             >
               <Italic className="size-4" />
+            </ToggleIcon>
+            <ToggleIcon
+              label="Underline"
+              active={!!style('underline')}
+              onClick={() => setStyle({ underline: style('underline') ? undefined : true })}
+            >
+              <Underline className="size-4" />
+            </ToggleIcon>
+            <ToggleIcon
+              label="Strike-through"
+              active={!!style('strike')}
+              onClick={() => setStyle({ strike: style('strike') ? undefined : true })}
+            >
+              <Strikethrough className="size-4" />
             </ToggleIcon>
             {hasBox && (
               <>

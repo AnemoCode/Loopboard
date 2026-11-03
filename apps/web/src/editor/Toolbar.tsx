@@ -3,6 +3,7 @@ import {
   Circle,
   Diamond,
   Hand,
+  Hexagon,
   MessageCircle,
   MousePointer2,
   RectangleHorizontal,
@@ -30,6 +31,7 @@ const SHAPES: { kind: ShapeKind; label: string; icon: ReactNode }[] = [
   { kind: 'rounded', label: 'Rounded rectangle', icon: <RectangleHorizontal className="size-4" /> },
   { kind: 'ellipse', label: 'Ellipse', icon: <Circle className="size-4" /> },
   { kind: 'diamond', label: 'Diamond', icon: <Diamond className="size-4" /> },
+  { kind: 'hexagon', label: 'Hexagon', icon: <Hexagon className="size-4 rotate-90" /> },
 ];
 
 export function Toolbar() {
