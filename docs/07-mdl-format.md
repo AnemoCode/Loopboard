@@ -6,6 +6,19 @@ Vensim `.mdl` is a text format with two parts: an **equations section** and a **
 
 > **Fixture strategy:** before writing the codec, produce a fixture set in Vensim PLE (free): one file per feature (box/ellipse variables, colored text, every polarity type, delay marks, both loop directions, multiple views, shadow variables, comments with text, fonts). Store them in `packages/mdl/test/fixtures/` with a screenshot of each. Those screenshots become our visual-regression goldens.
 
+> **Update (implemented): appearance.** Confirmed with Vensim's reference ("Sketch Object Detail") and a styled model saved from Vensim (`packages/mdl/test/fixtures/vensim-styles.mdl`); code in `packages/mdl/src/appearance.ts`.
+>
+> | Field | Encoding | Our model |
+> |-------|----------|-----------|
+> | variable / comment `sh` (low 5 bits) | `0` none, `2` circle, `3` box, `4`/`5` loop cw/ccw (comments), `6` hexagon (inferred: the only unassigned code that is always square across ~900 public models), `8` clear box (default), `11` diamond. Triangle / Up Triangle are probably `9`/`10` (unconfirmed): imported without outline, written back unchanged | variables: `form` `none` / `ellipse` / `rect` / `hexagon` / `diamond` (rounded → box on export, with a warning). Comments: box, circle, hexagon and diamond become shape elements (unfilled unless a fill is set), others text |
+> | variable / comment `hasf` | bit flags: `1` box (outline) color, `2` word color, `4` fill color, `8` font size, `16` font attributes, `32` font face. When non-zero, `box,fill,font` follow `nav2` | `stroke`, `textColor`, `fill`, `fontSize`, `bold/italic/underline/strike`, `fontFamily` |
+> | variable font | `face\|size\|attributes\|color`, attributes any of `B` `U` `S` `I` | face → sans/serif/mono (original face kept while the family is unchanged) |
+> | variable `bw` | outline width in pixels, `0` = default (1 px) | `strokeWidth` |
+> | arrow `hasf` bit `1` | the arrow `color` applies only when set | `style.color` |
+> | arrow `dtype` bit `128` | set: polarity sign outside the curve (default `192`); cleared: inside | `style.polaritySide` |
+>
+> Black (`0-0-0`) text and outline colors map to the theme default. Fields are rewritten only when the look they encode changed, so unedited objects round-trip byte-for-byte.
+
 ## 1. File structure
 
 ```
