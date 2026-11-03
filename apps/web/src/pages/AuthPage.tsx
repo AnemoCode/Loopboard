@@ -78,7 +78,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
             {guest
               ? 'Keep your projects'
               : mode === 'signin'
-                ? 'Welcome back'
+                ? 'Welcome to Loopwise'
                 : 'Create your account'}
           </h1>
           <p className="mt-1 text-sm text-muted">
@@ -87,6 +87,26 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
               : 'Draw causal loop diagrams together, in real time.'}
           </p>
         </div>
+        {!guest && (
+          <div className="mb-6">
+            <Button
+              variant="primary"
+              className="h-11 w-full text-base"
+              loading={starting}
+              onClick={startAsGuest}
+            >
+              Start drawing — no account needed
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted">
+              Your work stays in this browser until you create an account.
+            </p>
+            <div className="mt-6 flex items-center gap-3 text-xs text-muted">
+              <span className="h-px flex-1 bg-[var(--border)]" />
+              {mode === 'signin' ? 'or sign in' : 'or create an account'}
+              <span className="h-px flex-1 bg-[var(--border)]" />
+            </div>
+          </div>
+        )}
         <div className="rounded-2xl border border-app bg-surface p-6 shadow-sm">
           {!!config.data?.socialProviders.length && (
             <>
@@ -119,7 +139,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
             )}
             <Field label="Email">
               <Input
-                autoFocus={mode === 'signin'}
+                autoFocus={mode === 'signin' && guest}
                 required
                 type="email"
                 autoComplete="email"
@@ -146,26 +166,16 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
                 {error}
               </p>
             )}
-            <Button type="submit" variant="primary" className="w-full" loading={busy}>
+            <Button
+              type="submit"
+              variant={guest ? 'primary' : 'secondary'}
+              className="w-full"
+              loading={busy}
+            >
               {mode === 'signin' ? 'Sign in' : 'Create account'}
             </Button>
           </form>
         </div>
-        {!guest && (
-          <div className="mt-6">
-            <div className="mb-4 flex items-center gap-3 text-xs text-muted">
-              <span className="h-px flex-1 bg-[var(--border)]" />
-              or
-              <span className="h-px flex-1 bg-[var(--border)]" />
-            </div>
-            <Button className="w-full" loading={starting} onClick={startAsGuest}>
-              Start drawing — no account needed
-            </Button>
-            <p className="mt-2 text-center text-xs text-muted">
-              Your work stays in this browser until you create an account.
-            </p>
-          </div>
-        )}
         <p className="mt-6 text-center text-sm text-muted">
           {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
           <Link
