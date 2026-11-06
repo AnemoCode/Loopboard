@@ -9,7 +9,7 @@ export interface LoadedFile {
 
 export const ACCEPTED_FILES = '.mdl,.json';
 
-/** Read a Vensim .mdl or Loopwise .cld.json file into a project snapshot. */
+/** Read a Vensim .mdl or Loopboard .cld.json file into a project snapshot. */
 export async function readDiagramFile(file: File): Promise<LoadedFile> {
   if (file.size > MAX_MDL_BYTES) throw new Error('This file is too large (max 5 MB).');
   const lower = file.name.toLowerCase();
@@ -27,7 +27,7 @@ export async function readDiagramFile(file: File): Promise<LoadedFile> {
       throw new Error('This file is not valid JSON.');
     }
     const wrapper = data as { format?: string; project?: { name?: string }; doc?: unknown };
-    if (wrapper.format !== 'cld') throw new Error('This JSON file is not a Loopwise diagram.');
+    if (wrapper.format !== 'cld') throw new Error('This JSON file is not a Loopboard diagram.');
     const parsed = snapshotSchema.safeParse(wrapper.doc);
     if (!parsed.success)
       throw new Error('This diagram file is damaged or from an incompatible version.');
@@ -37,5 +37,5 @@ export async function readDiagramFile(file: File): Promise<LoadedFile> {
       warnings: [],
     };
   }
-  throw new Error('Unsupported file type. Choose a Vensim .mdl or a Loopwise .cld.json file.');
+  throw new Error('Unsupported file type. Choose a Vensim .mdl or a Loopboard .cld.json file.');
 }

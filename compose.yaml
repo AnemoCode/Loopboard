@@ -1,16 +1,16 @@
 # Production-like stack: `docker compose up -d --build`, then open http://localhost:8080
-name: loopwise
+name: loopboard
 services:
   db:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: loopwise
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-loopwise}
-      POSTGRES_DB: loopwise
+      POSTGRES_USER: loopboard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-loopboard}
+      POSTGRES_DB: loopboard
     volumes: [db:/var/lib/postgresql]
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U loopwise']
+      test: ['CMD-SHELL', 'pg_isready -U loopboard']
       interval: 3s
       retries: 20
 
@@ -18,7 +18,7 @@ services:
     build: { context: ., dockerfile: apps/server/Dockerfile }
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://loopwise:${POSTGRES_PASSWORD:-loopwise}@db:5432/loopwise
+      DATABASE_URL: postgres://loopboard:${POSTGRES_PASSWORD:-loopboard}@db:5432/loopboard
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET (openssl rand -base64 32)}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

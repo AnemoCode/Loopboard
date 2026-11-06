@@ -111,7 +111,7 @@ export function reorder(ctx: EditorCtx, op: ZOrderOp) {
 
 // ---------------------------------------------------------------- clipboard
 
-const CLIP_TYPE = 'loopwise/elements';
+const CLIP_TYPE = 'loopboard/elements';
 let pasteCount = 0;
 
 export function copyPayload(ctx: EditorCtx): string | null {

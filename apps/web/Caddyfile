@@ -7,7 +7,7 @@
 }
 
 # SITE_ADDRESS: ":80" for plain HTTP (local / behind another proxy) or a domain like
-# "loopwise.example.com" for automatic HTTPS.
+# "loopboard.example.com" for automatic HTTPS.
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
 

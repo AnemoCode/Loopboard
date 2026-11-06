@@ -61,7 +61,7 @@ Y.Doc → toSnapshot() → @cld/render.renderDiagramToSvg(snapshot, diagramId, {
   "format": "cld",
   "version": 1,
   "exportedAt": "2026-11-01T10:00:00Z",
-  "app": { "name": "loopwise", "version": "0.1.0" },
+  "app": { "name": "loopboard", "version": "0.1.0" },
   "project": { "name": "Coffee Agroforestry" },
   "doc": { "meta": {…}, "variables": {…}, "diagrams": {…}, "comments": {…} }
 }

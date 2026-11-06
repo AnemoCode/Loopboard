@@ -78,7 +78,7 @@ export async function runExport(
         format: 'cld',
         version: 1,
         exportedAt: new Date().toISOString(),
-        app: { name: 'loopwise' },
+        app: { name: 'loopboard' },
         project: { name: projectName },
         doc: snap,
       };
@@ -136,7 +136,7 @@ export async function runExport(
           host.remove();
         }
       }
-      pdf!.setProperties({ title: projectName, creator: 'Loopwise' });
+      pdf!.setProperties({ title: projectName, creator: 'Loopboard' });
       downloadBlob(pdf!.output('blob'), `${base}.pdf`);
       return;
     }
