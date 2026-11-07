@@ -1,12 +1,12 @@
-# Loopboard
+# Loopwise
 
 **Draw causal loop diagrams together, in real time.**
 
-Loopboard is a browser-based editor for causal loop diagrams (CLDs): the variables, cause-and-effect arrows and feedback loops used in systems thinking and system dynamics. Several people can work on the same diagram at once and see each other's cursors, selections and edits as they happen. Projects open and save as Vensim `.mdl` files, so a diagram can move between Loopboard and Vensim.
+Loopwise is a browser-based editor for causal loop diagrams (CLDs): the variables, cause-and-effect arrows and feedback loops used in systems thinking and system dynamics. Several people can work on the same diagram at once and see each other's cursors, selections and edits as they happen. Projects open and save as Vensim `.mdl` files, so a diagram can move between Loopwise and Vensim.
 
 ![Two people editing the same diagram: Sam's cursor and selection appear live in Alex's editor](docs/images/collaboration.png)
 
-## Why Loopboard
+## Why Loopwise
 
 - **Collaborative by default.** Everyone sees live cursors with names, everyone's selections and drags as they happen, and who is online. You can follow a teammate's view or leave threaded comments right on the diagram.
 - **Start in one click.** _Start drawing_ needs no account. An account is only needed to share a project or open it on other devices, and your guest projects move over when you sign up. Invited collaborators can also join from a share link by just typing their name.
@@ -16,7 +16,7 @@ Loopboard is a browser-based editor for causal loop diagrams (CLDs): the variabl
 - **Organised.** Many projects, several diagrams (views) per project, layers within a diagram, and example templates to start from.
 - **Access control.** Owner, editor, commenter and viewer roles, invite links, and guests who can do only what their role allows.
 
-Loopboard is open source and made by [AnemoLabs](https://anemolabs.de).
+Loopwise is open source and made by [AnemoLabs](https://anemolabs.de).
 
 ---
 

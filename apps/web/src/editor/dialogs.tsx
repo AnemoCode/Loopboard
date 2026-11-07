@@ -36,7 +36,7 @@ const FORMATS: { value: ExportFormat; label: string; hint: string }[] = [
   { value: 'svg', label: 'SVG', hint: 'Scalable vector image' },
   { value: 'pdf', label: 'PDF', hint: 'Vector document, one page per diagram' },
   { value: 'mdl', label: 'Vensim', hint: 'Vensim .mdl model with all diagrams as views' },
-  { value: 'json', label: 'Loopboard', hint: 'Lossless .cld.json backup' },
+  { value: 'json', label: 'Loopwise', hint: 'Lossless .cld.json backup' },
 ];
 
 function ExportDialog({ onOpenChange }: { onOpenChange: (o: boolean) => void }) {

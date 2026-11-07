@@ -12,7 +12,7 @@
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│ ◧ Loopboard / Coffee Agroforestry ▾   [Main ▾][Finance][+]   ●●● 👤👤 Share  ⤓ │  top bar
+│ ◧ Loopwise / Coffee Agroforestry ▾   [Main ▾][Finance][+]   ●●● 👤👤 Share  ⤓ │  top bar
 ├──┬─────────────────────────────────────────────────────────────────┬───────┤
 │▸ │                                                                 │Design │
 │✥ │                                                                 │───────│

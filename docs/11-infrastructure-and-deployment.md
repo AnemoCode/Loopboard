@@ -39,7 +39,7 @@ CMD ["node", "dist/server.js"]
 ## Compose: production-like (`compose.yaml`)
 
 ```yaml
-name: loopboard
+name: loopwise
 services:
   caddy:
     image: caddy:2-alpine

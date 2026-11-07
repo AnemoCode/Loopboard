@@ -17,7 +17,7 @@
 
 ## Open questions (decide before or during Phase 0/1)
 
-1. **Product name and domain:** "Loopboard" is a placeholder.
+1. **Product name and domain:** "Loopwise" is a placeholder.
 2. **Hosting target:** self-host on one VM (e.g. Hetzner, EU) as proposed, or a PaaS (Fly.io / Railway)? The plan assumes a VM with compose.
 3. **Who signs up:** open registration, invite-only beta, or university SSO only? This affects the auth providers in Phase 0.
 4. **Anonymous editing:** should someone be able to join a workshop through a link *without an account*? It's attractive for classrooms. Phase 5 currently plans anonymous *viewing* only.

@@ -24,7 +24,7 @@ The Share dialog's "Invite links" section becomes **"Share link"**:
 ```
 Share link
 [ Can edit ▾ ]  [✓] Anyone with the link can join without an account
-https://loopboard.app/invite/k3J9…        [ Copy link ]   [ Revoke ]
+https://loopwise.app/invite/k3J9…        [ Copy link ]   [ Revoke ]
 ```
 
 - The guest switch is **on by default** for new links, since the main use case is "only one account needed". It can be toggled on an existing link at any time.
@@ -96,7 +96,7 @@ Opening `/invite/:token` no longer requires signing in:
 // apps/server/src/auth.ts
 plugins: [
   anonymous({
-    emailDomainName: 'guest.loopboard.invalid', // placeholder emails, never shown or mailed
+    emailDomainName: 'guest.loopwise.invalid', // placeholder emails, never shown or mailed
     onLinkAccount: async ({ anonymousUser, newUser }) =>
       migrateGuest(anonymousUser.user.id, newUser.user.id),
   }),

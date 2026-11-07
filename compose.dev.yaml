@@ -1,19 +1,19 @@
 # Local development infrastructure. Run the apps on the host with `pnpm dev`.
-name: loopboard-dev
+name: loopwise-dev
 services:
   db:
     image: postgres:18-alpine
     environment:
-      POSTGRES_USER: loopboard
-      POSTGRES_PASSWORD: loopboard
-      POSTGRES_DB: loopboard
+      POSTGRES_USER: loopwise
+      POSTGRES_PASSWORD: loopwise
+      POSTGRES_DB: loopwise
     ports: ['5433:5432']
     volumes:
       - dev_db:/var/lib/postgresql
       # Creates the database used by `pnpm test` on first start.
       - ./docker/dev-db-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U loopboard']
+      test: ['CMD-SHELL', 'pg_isready -U loopwise']
       interval: 2s
       retries: 20
 volumes:

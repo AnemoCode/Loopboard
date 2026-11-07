@@ -3,12 +3,12 @@ const MAKER_URL = 'https://anemolabs.de';
 
 const linkClass = 'font-medium text-accent-600 hover:underline dark:text-accent-300';
 
-/** "Loopboard is open source" with a link to the repository, and the maker in the corner. */
+/** "Loopwise is open source" with a link to the repository, and the maker in the corner. */
 export function RepoFooter() {
   return (
     <footer className="relative w-full px-4 py-6 text-center text-xs text-muted sm:px-6">
       <p>
-        Loopboard is open source.{' '}
+        Loopwise is open source.{' '}
         <a href={REPO_URL} target="_blank" rel="noreferrer" className={linkClass}>
           View it on GitHub
         </a>

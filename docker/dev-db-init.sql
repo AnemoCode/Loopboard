@@ -1,1 +1,1 @@
-CREATE DATABASE loopboard_test;
+CREATE DATABASE loopwise_test;

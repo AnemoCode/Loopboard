@@ -14,12 +14,12 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_USER: loopboard
-          POSTGRES_PASSWORD: loopboard
-          POSTGRES_DB: loopboard_test
+          POSTGRES_USER: loopwise
+          POSTGRES_PASSWORD: loopwise
+          POSTGRES_DB: loopwise_test
         ports: ['5433:5432']
         options: >-
-          --health-cmd "pg_isready -U loopboard" --health-interval 3s --health-retries 20
+          --health-cmd "pg_isready -U loopwise" --health-interval 3s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

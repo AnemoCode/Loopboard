@@ -4,16 +4,16 @@
 
 ## Goal
 
-Anyone can try Loopboard in one click: draw a diagram from scratch or a template, or import a Vensim `.mdl` file, **without signing up**. An account is needed only to **share a project with others** or to **keep it on other devices**.
+Anyone can try Loopwise in one click: draw a diagram from scratch or a template, or import a Vensim `.mdl` file, **without signing up**. An account is needed only to **share a project with others** or to **keep it on other devices**.
 
-> Example: a student finds Loopboard, clicks *Start drawing — no account needed*, drops in their `.mdl` from class and sees the loops detected. When they want to send it to their group, Loopboard asks them to create a free account, and the project simply stays theirs.
+> Example: a student finds Loopwise, clicks *Start drawing — no account needed*, drops in their `.mdl` from class and sees the loops detected. When they want to send it to their group, Loopwise asks them to create a free account, and the project simply stays theirs.
 
 ## Why the wall sits at sharing, not at saving
 
 - **Everything autosaves.** Diagrams sync to the server continuously (Yjs), so there is no "Save" moment to gate. Gating on saving would mean either risking unsaved work or adding an artificial Save step.
 - **Sharing is where value is proven.** By the time someone invites others, they have seen what the tool does; asking for an account then feels fair.
 - **Sharing is where losing a guest hurts others.** If a guest owner clears their cookies, everyone they invited would lose the project too. An account owner keeps the "only one account needed" promise from doc 16 intact.
-- **Sharing is where abuse starts.** Anonymous share links would make Loopboard anonymous hosting. A guest who can only see their own work is uninteresting to spammers.
+- **Sharing is where abuse starts.** Anonymous share links would make Loopwise anonymous hosting. A guest who can only see their own work is uninteresting to spammers.
 
 ## Principles
 

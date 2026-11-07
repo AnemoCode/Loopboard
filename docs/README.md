@@ -1,6 +1,6 @@
-# Loopboard: Collaborative Causal Loop Diagrams (Planning Docs)
+# Loopwise: Collaborative Causal Loop Diagrams (Planning Docs)
 
-> Working title: **Loopboard**. Rename freely. Everything here uses `cld` / `@cld/*` as the internal package prefix.
+> Working title: **Loopwise**. Rename freely. Everything here uses `cld` / `@cld/*` as the internal package prefix.
 
 A browser-based, real-time collaborative editor for **causal loop diagrams (CLDs)**: the "Figma for system-dynamics sketches". It replaces the sketching part of Vensim, so it needs to import and export Vensim `.mdl` files without losing information.
 

@@ -27,7 +27,7 @@ export function Logo() {
   return (
     <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight text-app">
       <LogoMark />
-      <span className="text-[15px]">Loopboard</span>
+      <span className="text-[15px]">Loopwise</span>
     </Link>
   );
 }

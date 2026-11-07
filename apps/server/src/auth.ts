@@ -59,7 +59,7 @@ export function createAuth(env: Env, db: Db, hooks: AuthHooks = {}) {
     plugins: [
       anonymous({
         // Placeholder addresses for guests; never shown or mailed.
-        emailDomainName: 'guest.loopboard.invalid',
+        emailDomainName: 'guest.loopwise.invalid',
         generateName: () => 'Guest',
         onLinkAccount: async ({ anonymousUser, newUser }) => {
           await hooks.onGuestLinked?.(anonymousUser.user.id, newUser.user.id);

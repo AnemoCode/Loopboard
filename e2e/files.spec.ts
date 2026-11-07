@@ -46,7 +46,7 @@ test.describe('import, export and versions', () => {
     expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
     expect(pdfBytes.length).toBeGreaterThan(5_000);
 
-    const json = await download(/^Loopboard$/);
+    const json = await download(/^Loopwise$/);
     const data = JSON.parse(readFileSync((await json.path())!, 'utf8'));
     expect(data.format).toBe('cld');
     expect(Object.keys(data.doc.variables)).toHaveLength(16);

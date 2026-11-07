@@ -79,7 +79,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
             {guest
               ? 'Keep your projects'
               : mode === 'signin'
-                ? 'Welcome to Loopboard'
+                ? 'Welcome to Loopwise'
                 : 'Create your account'}
           </h1>
           <p className="mt-1 text-sm text-muted">

@@ -28,7 +28,7 @@ import {
 } from '../src/db/schema.js';
 
 const DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? 'postgres://loopboard:loopboard@localhost:5433/loopboard_test';
+  process.env.TEST_DATABASE_URL ?? 'postgres://loopwise:loopwise@localhost:5433/loopwise_test';
 const ORIGIN = 'http://localhost:5173';
 const env = loadEnv({
   DATABASE_URL,
