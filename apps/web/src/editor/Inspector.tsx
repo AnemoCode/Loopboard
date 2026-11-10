@@ -273,6 +273,36 @@ function LoopsPanel() {
   );
   if (!diagram || !result) return null;
   const name = (id: string) => view.variables[id]?.name ?? '?';
+  const entries = result.loops.map((loop) => {
+    const markerId = marked.get(loop.key);
+    const el = markerId ? diagram.elements[markerId] : undefined;
+    return { loop, marker: el?.type === 'loop' ? el : undefined };
+  });
+  // Marked loops in the order of the number in their label (R1, R2, …, R10); unmarked ones last.
+  const labelNumber = (label: string | undefined) => {
+    const m = label?.match(/\d+/);
+    return m ? Number(m[0]) : Infinity;
+  };
+  const groups = (
+    [
+      { kind: 'R', title: 'Reinforcing' },
+      { kind: 'B', title: 'Balancing' },
+      { kind: '?', title: 'Other' },
+    ] as const
+  )
+    .map((g) => ({
+      ...g,
+      loops: entries
+        .filter((e) => e.loop.kind === g.kind)
+        .sort(
+          (a, b) =>
+            labelNumber(a.marker?.label) - labelNumber(b.marker?.label) ||
+            (a.marker && b.marker
+              ? a.marker.label.localeCompare(b.marker.label, undefined, { numeric: true })
+              : 0),
+        ),
+    }))
+    .filter((g) => g.loops.length > 0);
   const counts = {
     R: result.loops.filter((l) => l.kind === 'R').length,
     B: result.loops.filter((l) => l.kind === 'B').length,
@@ -284,67 +314,72 @@ function LoopsPanel() {
           ? 'No feedback loops yet. Connect variables in a circle to create one.'
           : `${result.loops.length} feedback loop${result.loops.length === 1 ? '' : 's'}: ${counts.R} reinforcing, ${counts.B} balancing${result.truncated ? ' (showing the first 200)' : ''}.`}
       </p>
-      <ul className="mt-3 space-y-1.5">
-        {result.loops.map((loop) => {
-          const markerId = marked.get(loop.key);
-          const marker = markerId ? diagram.elements[markerId] : undefined;
-          const placed = marker?.type === 'loop';
-          return (
-            <li
-              key={loop.key}
-              onMouseEnter={() => set({ highlight: loop.linkIds })}
-              onFocus={() => set({ highlight: loop.linkIds })}
-              className="rounded-lg border border-app p-2.5 hover:bg-surface-2"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={cx(
-                    'flex size-6 items-center justify-center rounded-full text-xs font-bold',
-                    loop.kind === 'R'
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                      : loop.kind === 'B'
-                        ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300'
-                        : 'bg-surface-2 text-muted',
-                  )}
-                  title={
-                    loop.kind === 'R'
-                      ? 'Reinforcing'
-                      : loop.kind === 'B'
-                        ? 'Balancing'
-                        : 'Some links have no polarity'
-                  }
+      {groups.map((group) => (
+        <section key={group.kind} className="mt-4">
+          <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted">
+            {group.title} · {group.loops.length}
+          </h3>
+          <ul className="mt-1.5 space-y-1.5">
+            {group.loops.map(({ loop, marker }) => {
+              const placed = !!marker;
+              return (
+                <li
+                  key={loop.key}
+                  onMouseEnter={() => set({ highlight: loop.linkIds })}
+                  onFocus={() => set({ highlight: loop.linkIds })}
+                  className="rounded-lg border border-app p-2.5 hover:bg-surface-2"
                 >
-                  {loop.kind}
-                </span>
-                <span className="text-xs text-muted">
-                  {loop.variableIds.length} variables · {loop.direction === 'cw' ? '↻' : '↺'}
-                </span>
-                {ctx.canEdit && !placed && (
-                  <button
-                    className="ml-auto flex items-center gap-1 text-xs font-medium text-accent-600 hover:underline dark:text-accent-300"
-                    onClick={() => placeLoopMarker(ctx, loop)}
-                  >
-                    <RefreshCw className="size-3" /> Add marker
-                  </button>
-                )}
-                {placed && (
-                  <button
-                    className="ml-auto min-w-0 truncate text-xs text-muted hover:text-app hover:underline"
-                    title="Select this loop's marker"
-                    onClick={() => set({ selection: [marker.id] })}
-                  >
-                    Marked {marker.label}
-                    {marker.name ? ` · ${marker.name}` : ''}
-                  </button>
-                )}
-              </div>
-              <p className="mt-1.5 text-xs leading-relaxed text-app">
-                {[...loop.variableIds, loop.variableIds[0]!].map(name).join(' → ')}
-              </p>
-            </li>
-          );
-        })}
-      </ul>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cx(
+                        'flex size-6 items-center justify-center rounded-full text-xs font-bold',
+                        loop.kind === 'R'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                          : loop.kind === 'B'
+                            ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300'
+                            : 'bg-surface-2 text-muted',
+                      )}
+                      title={
+                        loop.kind === 'R'
+                          ? 'Reinforcing'
+                          : loop.kind === 'B'
+                            ? 'Balancing'
+                            : 'Some links have no polarity'
+                      }
+                    >
+                      {loop.kind}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {loop.variableIds.length} variables · {loop.direction === 'cw' ? '↻' : '↺'}
+                    </span>
+                    {ctx.canEdit && !placed && (
+                      <button
+                        className="ml-auto flex items-center gap-1 text-xs font-medium text-accent-600 hover:underline dark:text-accent-300"
+                        onClick={() => placeLoopMarker(ctx, loop)}
+                      >
+                        <RefreshCw className="size-3" /> Add marker
+                      </button>
+                    )}
+                    {placed && (
+                      <button
+                        className="ml-auto min-w-0 truncate text-xs text-muted hover:text-app hover:underline"
+                        title="Select this loop's marker"
+                        onClick={() => set({ selection: [marker.id] })}
+                      >
+                        Marked {marker.label}
+                        {marker.name ? ` · ${marker.name}` : ''}
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xs leading-relaxed text-app">
+                    {[...loop.variableIds, loop.variableIds[0]!].map(name).join(' → ')}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
